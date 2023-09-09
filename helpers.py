@@ -139,9 +139,9 @@ def disclaimers():
             All the records are for the subject of Physiology only. ''')
 
     st.write('''** The records are not guaranteed to be completely accurate.
-            In case of any inconsistencies with our physical records, the physical records shall be final.
+            In case of any inconsistencies with our physical records, the physical records shall be considered final.
             If you notice any discrepancies, please notify the department office immediately.''')
 
-    st.write('''** Eligibility criteria for appearing in the first year MBBS examination 
+    st.write('''** Eligibility criteria for appearing in the final examination 
             is based on the attendance and formative assessment scores. Not fulfilling the criteria will result in disqualification.''')
 
