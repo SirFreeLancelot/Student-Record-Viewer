@@ -1,24 +1,16 @@
 import streamlit as st
 import gspread
 import pandas as pd
-import hashlib
-from gspread_dataframe import set_with_dataframe
 from google.oauth2 import service_account
 
 sheet_name = "Student Record Manager"
 
 # Names must match worksheet names
-session_types = ["Theory", "Practical", "SGD", "Seminar", "ECE", "AETCOM", "Skill Cert"]
-
-class_slots = ["9-10", "10-11", "11-12", "11-1", "2-4", "12-1"]
-
-batches = {"All": {"start": 1, "end": 250, 'row': 1} ,"A": {"start": 1, "end": 50, 'row': 2}, 
-           "B": {"start": 51, "end": 100, 'row': 55}, "C": {"start": 101, "end": 150, 'row': 108}, 
-           "D": {"start": 151, "end": 200, 'row': 161}, "E": {"start": 201, "end": 250, 'row': 214}}
+batch_sessions = ["Practical", "SGD"]
 
 # Keys must match possible batch names
-dataframes = {"All": "D1:GU251", "A": "D2:GU52", "B": "D55:GU105", "C": "D108:GU158", "D": "D161:GU211", "E": "D214:GU264"}
-
+dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
+theory_frame = "D1:GU251"
 
 @st.cache_resource
 def load_google_sheets_credentials():
@@ -41,30 +33,115 @@ def authorize_client():
     return gspread.authorize(credentials)
 
 
-def load_attendance_data(session_type, batch):
-    client = authorize_client()
-    gsheet = client.open(sheet_name).worksheet(session_type)
-    return gsheet.get(dataframes[batch])
-
-
-def save_attendance_data(session_type, batch, data):
-    client = authorize_client()
-    gsheet = client.open(sheet_name).worksheet(session_type)
-    set_with_dataframe(gsheet, data, batches[batch]['row'], 4)
-
-
 def df_with_header(data):
     df = pd.DataFrame(data=data[1:], columns=data[0])
     return df
 
 
-def df_to_hash(data):
-    data_str = data.to_string(index=False)
-    data_hash = hashlib.sha256(data_str.encode()).hexdigest()
-    return data_hash
+def load_attendance_data():
+    try:
+        client = authorize_client()
+        theory_sheet = client.open(sheet_name).worksheet('Theory')
+        theory_data = theory_sheet.get(theory_frame)
+        st.session_state.theory = df_with_header(theory_data)
+        for batch in batch_sessions:
+            dataframes_sheet = client.open(sheet_name).worksheet(batch)
+            dataframes_data = dataframes_sheet.batch_get(dataframes)
+            st.session_state[batch] = []
+            for data in dataframes_data:
+                st.session_state[batch] += [df_with_header(data)]
+        return True
+    except:
+        return False
+    
+
+def render_theory(roll_number):
+    theory = st.session_state.theory
+    att_str = ''
+    abs_str = f'Absent on [ s.no. - (dd-mm | time) ] : '
+    total = 0
+    attended = 0
+    errors = 0
+
+    for date in list(theory.columns):
+        if theory[date][roll_number-1] == 'P':
+            total += 1
+            attended += 1
+            att_str += f'✅'
+        elif theory[date][roll_number-1] == 'A':
+            total += 1
+            att_str += f'🆎'
+            abs_str += f' [ {total} - ({date}) ] '
+        else:
+            errors += 1
+    
+    if total == attended:
+        abs_str = 'No absences!'
+
+    if total > 0:
+        st.write(f"Theory : {attended} / {total} - ( {round(100 * attended / total,2)} % ) ( cutoff - 75 % )")
+        st.text(att_str, help=f'{abs_str}')
+    else:
+        st.warning('No records found for theory', icon="⚠️")
+    
+    if errors > 0:
+        st.error(f'{errors} errors detected in theory records. Kindly notify the department office', icon="⚠️")
 
 
-def mark_attendance(roll_num, start, end, attendance):
-    attendance_list = st.session_state.attendance_list
-    attendance_list[(roll_num-1)%(end-start+1)] = attendance
+def render_attendance(roll_number):
+    for batch in batch_sessions:
+        data = st.session_state[batch][(roll_number-1) // 50]
+        att_str = ''
+        abs_str = f'Absent on [ s.no. - (dd-mm | time) ] : '
+        total = 0
+        attended = 0
+        errors = 0
+        
+        for date in list(data.columns):
+            if data[date][(roll_number-1) % 50] == 'P':
+                total += 1
+                attended += 1
+                att_str += f'✅'
+            elif data[date][(roll_number-1) % 50] == 'A':
+                total += 1
+                att_str += f'🆎'
+                abs_str += f' [ {total} - ({date}) ] '
+            else:
+                errors += 1
+
+        if total == attended:
+            abs_str = 'No absences!'
+
+        if total > 0:
+            st.write(f"{batch} : {attended} / {total} - ( {round(100 * attended / total,2)} % ) ( cutoff - 75 % )")
+            st.text(att_str, help=f'{abs_str}')
+        else:
+            st.warning(f'No records found for {batch}', icon="⚠️")
+
+        if errors > 0:
+            st.error(f'{errors} errors detected in {batch} records. Kindly notify the department office', icon="⚠️")
+
+
+def signatures():
+    sign1, sign2 = st.columns([2,1])
+
+    with sign1:
+        st.success(" Developed by Dr Suraj", icon="🌟")
+    with sign2:
+        st.info(" Version 1.1", icon="ℹ️")
+
+
+def disclaimers():
+    st.write('''** Version 1.1 displays only Attendance records for Theory, Practical and SGD sessions.
+            Support for other sessions and formative assessment scores will be added soon. ''')
+
+    st.write('''** Please note that these records are provided provisionally for your reference, by the Physiology department. 
+            All the records are for the subject of Physiology only. ''')
+
+    st.write('''** The records are not guaranteed to be completely accurate.
+            In case of any inconsistencies with our physical records, the physical records shall be final.
+            If you notice any discrepancies, please notify the department office immediately.''')
+
+    st.write('''** Eligibility criteria for appearing in the first year MBBS examination 
+            is based on the attendance and formative assessment scores. Not fulfilling the criteria will result in disqualification.''')
 
