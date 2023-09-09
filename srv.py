@@ -38,8 +38,8 @@ if st.session_state.valid_roll_number and not st.session_state.data_pulled:
         st.error(' Could not load the attendance data', icon="⚠️")
         st.info(''' The most likely cause is that the google server limits have been reached.
                 It is refreshed once every 100 seconds. Please try again after a couple of minutes.
-                If this error persists, kindly notify me. You can reach me on WhatsApp at 7411892691. 
-                Your friendly neighborhood web developer, Dr Suraj. ''', icon="ℹ️")
+                If this error persists, kindly notify me. 
+                 - Your friendly neighborhood web developer, Dr Suraj. ''', icon="ℹ️")
 
 info1, info2 = st.columns([1,1])
 
