@@ -132,9 +132,6 @@ def signatures():
 
 
 def disclaimers():
-    st.write('''** Version 1.1 displays only Attendance records for Theory, Practical and SGD sessions.
-            Support for other sessions and formative assessment scores will be added soon. ''')
-
     st.write('''** Please note that these records are provided provisionally for your reference, by the Physiology department. 
             All the records are for the subject of Physiology only. ''')
 
@@ -144,4 +141,13 @@ def disclaimers():
 
     st.write('''** Eligibility criteria for appearing in the final examination 
             is based on the attendance and formative assessment scores. Not fulfilling the criteria will result in disqualification.''')
+    
+    st.write('''** Version 1.1 displays only Attendance records for Theory, Practical and SGD sessions.
+            Support for other sessions and formative assessment scores will be added soon. ''')
+    
+    st.write('''** Developer's Note - Thank you for using my app! I hope you find it helpful. 
+             I would really appreciate your valuable feedback. 
+             Please reach out to me if you have any suggestions, queries or error reports. ''')
+
+    st.write('''** - Your friendly neighborhood Web Developer, Dr Suraj (not Spider-man, unfortunately)''')
 
