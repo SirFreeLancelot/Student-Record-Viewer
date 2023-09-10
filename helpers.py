@@ -6,11 +6,22 @@ from google.oauth2 import service_account
 sheet_name = "Student Record Manager"
 
 # Names must match worksheet names
-batch_sessions = ["Practical", "SGD"]
+batch_sessions = ["Practical", "AETCOM"]
+cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 
 # Keys must match possible batch names
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
 theory_frame = "D1:GU251"
+scores_frame = "B2:Z253"
+scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
+                  'Viva 1','Viva 2','MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism',
+                  'Practical Total','Practical IA','Practical FA','Practical 1','Practical 2','Practical 3',
+                  'Record','Skill Certification','ECE','Assignment','Pr Professionalism']
+theory_scores = ['Theory 1','Theory 2','Theory 3','Viva 1','Viva 2',
+                 'MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism']
+practical_scores = ['Practical 1','Practical 2','Practical 3','Record',
+                    'Skill Certification','ECE','Assignment','Pr Professionalism']
+
 
 @st.cache_resource
 def load_google_sheets_credentials():
@@ -38,7 +49,7 @@ def df_with_header(data):
     return df
 
 
-def load_attendance_data():
+def load_student_data():
     try:
         client = authorize_client()
         theory_sheet = client.open(sheet_name).worksheet('Theory')
@@ -50,10 +61,47 @@ def load_attendance_data():
             st.session_state[batch] = []
             for data in dataframes_data:
                 st.session_state[batch] += [df_with_header(data)]
+        scores_sheet = client.open(sheet_name).worksheet('Scores')
+        scores_data = scores_sheet.get(scores_frame)
+        st.session_state.scores = df_with_header(scores_data)
         return True
     except:
         return False
     
+
+def attendance_eligibility_criteria():
+    with st.expander("Eligibility Criteria"):
+        st.write(f''' 1. Theory Attendance must be at least {cutoff['Theory']}%. 
+                    This includes theory classes ''')
+        st.write(f''' 2. Practical Attendance must be at least {cutoff['Practical']}%. 
+                    This includes lab sessions, SGDs, ECEs, Skill Certifications ''')
+        st.write(f''' 3. AETCOM Attendance must be at least {cutoff['AETCOM']}%. 
+                    This includes AETCOM sessions ''')
+        
+
+def scores_eligibility_criteria():
+    with st.expander("Eligibility Criteria"):
+        st.write(f''' 1. Theory Total must be at least 40%. 
+                    This includes average of the three theory internal scores scaled to 80, 
+                    and other formative scores scaled to 20 ''')
+        st.write(f''' 2. Practical Total must be at least 40%. 
+                    This includes average of the three practical internal scores scaled to 80,
+                    and other formative scores scaled to 20 ''')
+        st.write(f''' 3. Aggregate final score must be at least 50%. 
+                    This is the average of the theory and practical scores ''')
+    with st.expander("Scoring Criteria"):
+        st.write(f''' 1. Aggregate (max. 100) = (Theory Total + Practical Total) / 2 ''')
+        st.write(f''' 2. Theory Total (max. 100) = Theory IA + Theory FA ''')
+        st.write(f''' 3. Practical Total (max. 100) = Practical IA + Practical FA ''')
+        st.write(f''' 4. Theory IA (max. 80) = (Theory 1 + Theory 2 + Theory 3) / 3 .
+                         All three scores Theory 1, 2 and 3 are scaled to 80. ''')
+        st.write(f''' 5. Practical IA (max. 80) = (Practical 1 + Practical 2 + Practical 3) / 3 .
+                         All three scores Practical 1, 2 and 3 are scaled to 80. ''')
+        st.write(f''' 6. Theory FA (max. 20) = (Viva 1 + Viva 2 + MCQ 1 + MCQ 2 + MCQ 3 + Seminar + Th Professionalism) 
+                         scaled to 20.''')
+        st.write(f''' 7. Practical FA (max. 20) = (Record + Skill Certification + ECE + Assignment + Pr Professionalism) 
+                         scaled to 20.''')
+
 
 def render_theory(roll_number):
     theory = st.session_state.theory
@@ -76,10 +124,16 @@ def render_theory(roll_number):
             errors += 1
     
     if total == attended:
-        abs_str = 'No absences!'
+        abs_str = ' No absences! Keep it up! '
 
     if total > 0:
-        st.write(f"Theory : {attended} / {total} - ( {round(100 * attended / total,2)} % ) ( cutoff - 75 % )")
+        percentage = round(100 * attended / total,2)
+        if percentage < cutoff['Theory']:
+            eligibility = '🔴 :red[Not Eligible]'
+            st.session_state.eligible = False
+        else:
+            eligibility = '🟢 :green[Eligible]'
+        st.write(f"Theory : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
         st.text(att_str, help=f'{abs_str}')
     else:
         st.warning('No records found for theory', icon="⚠️")
@@ -110,10 +164,16 @@ def render_attendance(roll_number):
                 errors += 1
 
         if total == attended:
-            abs_str = 'No absences!'
+            abs_str = ' No absences! Keep it up! '
 
         if total > 0:
-            st.write(f"{batch} : {attended} / {total} - ( {round(100 * attended / total,2)} % ) ( cutoff - 75 % )")
+            percentage = round(100 * attended / total,2)
+            if percentage < cutoff[batch]:
+                eligibility = '🔴 :red[Not Eligible]'
+                st.session_state.eligible = False
+            else:
+                eligibility = '🟢 :green[Eligible]'
+            st.write(f"{batch} : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
             st.text(att_str, help=f'{abs_str}')
         else:
             st.warning(f'No records found for {batch}', icon="⚠️")
@@ -122,32 +182,74 @@ def render_attendance(roll_number):
             st.error(f'{errors} errors detected in {batch} records. Kindly notify the department office', icon="⚠️")
 
 
+def render_scores(roll_number):
+    scores = st.session_state.scores
+    student_scores = {}
+    for column in scores_columns:
+        student_scores[column] = f'{scores[column][roll_number-1]} / {scores[column][250]}'
+    if int(scores['Aggregate'][roll_number-1]) < 50:
+        st.session_state.eligible = False
+        aggregate_eligibility = '🔴 :red[Not Eligible]'
+    else:
+        aggregate_eligibility = '🟢 :green[Eligible]'
+    if int(scores['Theory Total'][roll_number-1]) < 40:
+        st.session_state.eligible = False
+        theory_eligibility = '🔴 :red[Not Eligible]'
+    else:
+        theory_eligibility = '🟢 :green[Eligible]'
+    if int(scores['Practical Total'][roll_number-1]) < 40:
+        st.session_state.eligible = False
+        practical_eligibility = '🔴 :red[Not Eligible]'
+    else:
+        practical_eligibility = '🟢 :green[Eligible]'
+    st.write(f"1. Aggregate final score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
+    st.write(f"2. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
+    st.write(f"3. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+    with st.expander("Breakdown of Theory Scores"):
+        for column in theory_scores:
+            zeroes = scores[column].tolist().count('0')
+            if zeroes == 250:
+                st.write(f"{column} : TBD")
+            else:
+                st.write(f"{column} : {student_scores[column]}")
+    with st.expander("Breakdown of Practical Scores"):
+        for column in practical_scores:
+            zeroes = scores[column].tolist().count('0')
+            if zeroes == 250:
+                st.write(f"{column} : TBD")
+            else:
+                st.write(f"{column} : {student_scores[column]}")
+
+
 def signatures():
     sign1, sign2 = st.columns([2,1])
 
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 1.1", icon="ℹ️")
+        st.info(" Version 1.2", icon="ℹ️")
 
 
 def disclaimers():
-    st.write('''** Please note that these records are provided provisionally for your reference, by the Physiology department. 
-            All the records are for the subject of Physiology only. ''')
+    st.write('''** Please note that these records are provided provisionally 
+             for your reference, by the Department of Physiology. 
+             All the records are for the subject of Physiology only. ''')
 
     st.write('''** The records are not guaranteed to be completely accurate.
-            In case of any inconsistencies with our physical records, the physical records shall be considered final.
-            If you notice any discrepancies, please notify the department office immediately.''')
+             In case of any inconsistencies with our physical records, the physical records shall be considered final.
+             If you notice any discrepancies, please notify the department office immediately.''')
 
     st.write('''** Eligibility criteria for appearing in the final examination 
-            is based on the attendance and formative assessment scores. Not fulfilling the criteria will result in disqualification.''')
-    
-    st.write('''** Version 1.1 displays only Attendance records for Theory, Practical and SGD sessions.
-            Support for other sessions and formative assessment scores will be added soon. ''')
-    
-    st.write('''** Developer's Note - Thank you for using my app! I hope you find it helpful. 
-             I would really appreciate your valuable feedback. 
-             Please reach out to me if you have any suggestions, queries or error reports. ''')
+             are based on the attendance and formative assessment scores. 
+             You will be allowed to write the examination only after fulfilling the eligibility criteria.
+             Not fulfilling the criteria will result in disqualification.''')
 
-    st.write('''** - Your friendly neighborhood Web Developer, Dr Suraj (not Spider-man, unfortunately)''')
+
+def developers_note():
+    st.write('''** Developer's Note - Thank you for using my app! I hope you find it helpful. 
+             I would really appreciate your valuable feedback. Anything you would like to tell me is welcome!
+             Please reach out to me if you have any messages, suggestions, comments, queries or error reports. 
+             You can write to me anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8 ''')
+
+    st.write('''** - Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately)''')
 
