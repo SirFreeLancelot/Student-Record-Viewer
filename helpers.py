@@ -74,9 +74,12 @@ def attendance_eligibility_criteria():
         st.write(f''' 1. Theory Attendance must be at least {cutoff['Theory']}%. 
                     This includes theory classes ''')
         st.write(f''' 2. Practical Attendance must be at least {cutoff['Practical']}%. 
-                    This includes lab sessions, SGDs, ECEs, Skill Certifications ''')
+                    This includes lab sessions, SGDs, ECEs, Skill Certifications.
+                    Each session is worth 2 hours, except ECE, which is worth 3 hours. ''')
         st.write(f''' 3. AETCOM Attendance must be at least {cutoff['AETCOM']}%. 
                     This includes AETCOM sessions ''')
+        st.write(f''' Key: SGD - Small Group Discussions; ECE - Early Clinical Exposure; 
+                      AETCOM - Attitude, Ethics and Communication ''')
         
 
 def scores_eligibility_criteria():
@@ -87,10 +90,10 @@ def scores_eligibility_criteria():
         st.write(f''' 2. Practical Total must be at least 40%. 
                     This includes average of the three practical internal scores scaled to 80,
                     and other formative scores scaled to 20 ''')
-        st.write(f''' 3. Aggregate final score must be at least 50%. 
+        st.write(f''' 3. Aggregate Score must be at least 50%. 
                     This is the average of the theory and practical scores ''')
     with st.expander("Scoring Criteria"):
-        st.write(f''' 1. Aggregate (max. 100) = (Theory Total + Practical Total) / 2 ''')
+        st.write(f''' 1. Aggregate Score (max. 100) = (Theory Total + Practical Total) / 2 ''')
         st.write(f''' 2. Theory Total (max. 100) = Theory IA + Theory FA ''')
         st.write(f''' 3. Practical Total (max. 100) = Practical IA + Practical FA ''')
         st.write(f''' 4. Theory IA (max. 80) = (Theory 1 + Theory 2 + Theory 3) / 3 .
@@ -101,12 +104,17 @@ def scores_eligibility_criteria():
                          scaled to 20.''')
         st.write(f''' 7. Practical FA (max. 20) = (Record + Skill Certification + ECE + Assignment + Pr Professionalism) 
                          scaled to 20.''')
+        st.write(f''' Key: IA - Internal Assessment; FA - Formative Assessment; MCQ - Multiple Choice Questions''')
 
 
 def render_theory(roll_number):
     theory = st.session_state.theory
+    date_columns = list(theory.columns)
+    if date_columns[0] == 'E':
+        st.write(f"Theory : No theory classes conducted")
+        return
     att_str = ''
-    abs_str = f'Absent on [ s.no. - (dd-mm | time) ] : '
+    abs_list = [f'(s.no. | dd-mm | time)']
     total = 0
     attended = 0
     errors = 0
@@ -119,12 +127,12 @@ def render_theory(roll_number):
         elif theory[date][roll_number-1] == 'A':
             total += 1
             att_str += f'🆎'
-            abs_str += f' [ {total} - ({date}) ] '
+            abs_list += [f'{total} | {date}']
         else:
             errors += 1
     
     if total == attended:
-        abs_str = ' No absences! Keep it up! '
+        abs_list = [' :green[No absences! Keep it up!] ']
 
     if total > 0:
         percentage = round(100 * attended / total,2)
@@ -134,24 +142,33 @@ def render_theory(roll_number):
         else:
             eligibility = '🟢 :green[Eligible]'
         st.write(f"Theory : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
-        st.text(att_str, help=f'{abs_str}')
+        st.write(att_str)
+        with st.expander("Theory Absences"):
+            for absence in abs_list:
+                st.write(absence)            
     else:
-        st.warning('No records found for theory', icon="⚠️")
+        st.error('No records found for theory', icon="⚠️")
     
     if errors > 0:
         st.error(f'{errors} errors detected in theory records. Kindly notify the department office', icon="⚠️")
 
 
 def render_attendance(roll_number):
-    for batch in batch_sessions:
+    for batch in batch_sessions:        
         data = st.session_state[batch][(roll_number-1) // 50]
+        date_columns = list(data.columns)
+        if date_columns[0] == 'E':
+            st.write(f"{batch} : No {batch} sessions conducted")
+            continue
         att_str = ''
-        abs_str = f'Absent on [ s.no. - (dd-mm | time) ] : '
+        abs_list = ['(s.no. - dd-mm | time)']
+        if batch == 'Practical':
+            abs_list = ['(s.no. - dd-mm | time | session)']
         total = 0
         attended = 0
         errors = 0
         
-        for date in list(data.columns):
+        for date in date_columns:
             if data[date][(roll_number-1) % 50] == 'P':
                 total += 1
                 attended += 1
@@ -159,12 +176,26 @@ def render_attendance(roll_number):
             elif data[date][(roll_number-1) % 50] == 'A':
                 total += 1
                 att_str += f'🆎'
-                abs_str += f' [ {total} - ({date}) ] '
+                abs_list += [f'{total} | {date}']
             else:
                 errors += 1
 
         if total == attended:
-            abs_str = ' No absences! Keep it up! '
+            abs_list = [' :green[No absences! Keep it up!] ']
+
+        total = total * 2
+        attended = attended * 2
+
+        if batch == 'Practical':
+            for date in date_columns:
+                if date[-3:] == 'ECE':
+                    if data[date][(roll_number-1) % 50] == 'P':
+                        total += 1
+                        attended += 1
+                    elif data[date][(roll_number-1) % 50] == 'A':
+                        total += 1
+                    else:
+                        errors += 1
 
         if total > 0:
             percentage = round(100 * attended / total,2)
@@ -174,7 +205,10 @@ def render_attendance(roll_number):
             else:
                 eligibility = '🟢 :green[Eligible]'
             st.write(f"{batch} : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
-            st.text(att_str, help=f'{abs_str}')
+            st.write(att_str)
+            with st.expander(f"{batch} Absences"):
+                for absence in abs_list:
+                    st.write(absence)
         else:
             st.warning(f'No records found for {batch}', icon="⚠️")
 
@@ -202,9 +236,9 @@ def render_scores(roll_number):
         practical_eligibility = '🔴 :red[Not Eligible]'
     else:
         practical_eligibility = '🟢 :green[Eligible]'
-    st.write(f"1. Aggregate final score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
-    st.write(f"2. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
-    st.write(f"3. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+    st.write(f"1. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
+    st.write(f"2. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+    st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
     with st.expander("Breakdown of Theory Scores"):
         for column in theory_scores:
             zeroes = scores[column].tolist().count('0')
