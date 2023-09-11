@@ -118,7 +118,7 @@ def render_theory(roll_number):
     theory = st.session_state.theory
     date_columns = list(theory.columns)
     if date_columns[0] == 'E':
-        st.write(f"Theory : No theory classes conducted yet")
+        st.write(f"###### Theory : No theory classes conducted yet")
         return
     att_str = ''
     abs_list = [f'(s.no. | dd-mm | time)']
@@ -148,9 +148,10 @@ def render_theory(roll_number):
             st.session_state.eligible = False
         else:
             eligibility = '🟢 :green[Eligible]'
-        st.write(f"Theory : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
-        st.write(att_str)
-        with st.expander("Theory Absences"):
+        st.write(f"###### Theory : ( {attended} / {total} ) - ( {percentage} % ) - ( {eligibility} )")
+        with st.expander("Theory Overview"):
+            st.write(att_str)
+        with st.expander("Theory Absence Details"):
             for absence in abs_list:
                 st.write(absence)            
     else:
@@ -166,7 +167,7 @@ def render_attendance(roll_number):
         data = st.session_state[batch][(roll_number-1) // 50]
         date_columns = list(data.columns)
         if date_columns[0] == 'E':
-            st.write(f"{batch} : No {batch} sessions conducted yet")
+            st.write(f"###### {batch} : No {batch} sessions conducted yet")
             continue
         att_str = ''
         abs_list = ['(s.no. | dd-mm | time)']
@@ -212,8 +213,9 @@ def render_attendance(roll_number):
                 st.session_state.eligible = False
             else:
                 eligibility = '🟢 :green[Eligible]'
-            st.write(f"{batch} : {attended} / {total} - ( {percentage} % ) ( {eligibility} )")
-            st.write(att_str)
+            st.write(f"###### {batch} : ( {attended} / {total} ) - ( {percentage} % ) - ( {eligibility} )")
+            with st.expander(f'{batch} Overview'):
+                st.write(att_str)
             with st.expander(f"{batch} Absences"):
                 for absence in abs_list:
                     st.write(absence)
@@ -292,7 +294,7 @@ def signatures():
 
 # Render disclaimers
 def disclaimers():
-    st.write('''** Please note that these records are provided provisionally 
+    st.write('''** Please note that these records are made available provisionally 
              for your reference, by the Department of Physiology. 
              All the records are for the subject of Physiology only. ''')
 

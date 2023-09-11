@@ -66,15 +66,15 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
     st.session_state.eligible = True
     
     # Attendance block
-    st.warning('Attendance') 
+    st.warning('##### Attendance') 
     attendance_eligibility_criteria()
     render_theory(roll_number)
     render_attendance(roll_number)
      
     # Scores block
-    st.warning('Scores')
+    st.warning('##### Scores')
     # Scores update news
-    st.write(''' No assessments have been conducted yet. Check back here for updates as they come. ''')
+    st.write('''###### No assessments have been conducted yet. Check back here for updates as they come. ''')
     scores_eligibility_criteria()
     render_scores(roll_number)
 
