@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 import pandas as pd
 from google.oauth2 import service_account
+import random
 
 sheet_name = "Student Record Manager"
 
@@ -12,7 +13,7 @@ cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 # Frames must match possible batch ranges
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
 theory_frame = "D1:GU251"
-scores_frame = "B2:Z253"
+scores_frames = ["B2:Z253", "B255"]
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
                   'Viva 1','Viva 2','MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism',
                   'Practical Total','Practical IA','Practical FA','Practical 1','Practical 2','Practical 3',
@@ -25,15 +26,15 @@ practical_scores = ['Practical 1','Practical 2','Practical 3','Record',
 
 # Cache google sheet credentials
 @st.cache_resource
-def load_google_sheets_credentials():
-    google_sheets_credentials = st.secrets["google_sheets_credentials"]
+def load_google_sheets_credentials(account):
+    google_sheets_credentials = st.secrets[account]
     return google_sheets_credentials
 
 
 # Cache gspread
 @st.cache_resource
-def authorize_client():
-    google_sheets_credentials = load_google_sheets_credentials()
+def authorize_client(account):
+    google_sheets_credentials = load_google_sheets_credentials(account)
     scopes = [
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive',
@@ -52,25 +53,74 @@ def df_with_header(data):
     return df
 
 
-# Load student data into session state variables
+# Load student data into session state variables. Log operations into status
 def load_student_data():
-    try:
-        client = authorize_client()
-        theory_sheet = client.open(sheet_name).worksheet('Theory')
-        theory_data = theory_sheet.get(theory_frame)
-        st.session_state.theory = df_with_header(theory_data)
-        for batch in batch_sessions:
-            dataframes_sheet = client.open(sheet_name).worksheet(batch)
-            dataframes_data = dataframes_sheet.batch_get(dataframes)
-            st.session_state[batch] = []
-            for data in dataframes_data:
-                st.session_state[batch] += [df_with_header(data)]
-        scores_sheet = client.open(sheet_name).worksheet('Scores')
-        scores_data = scores_sheet.get(scores_frame)
-        st.session_state.scores = df_with_header(scores_data)
-        return True
-    except:
-        return False
+    # Reader accounts - make sure read access is granted
+    accounts = ['Reader_1', 'Reader_2', 'Reader_3', 'Reader_4', 
+                'Reader_5', 'Reader_6', 'Reader_7', 'Reader_8', 'Reader_9', 
+                'Reader_10', 'Reader_11', 'Reader_12', 'Reader_13', 'Reader_14', 
+                'Reader_15', 'Reader_16', 'Reader_17', 'Reader_18', 'Reader_19']
+    number_of_accounts = len(accounts)
+    shuffles = random.randint(2, 10)
+    for i in range(shuffles):
+        random.shuffle(accounts)
+    i = 1
+    fetched = 0
+    with st.status(f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]", expanded=False) as status:
+        while i <= number_of_accounts and st.session_state.data_pulled == False:
+            account = accounts[i-1]
+            try:
+                st.write(f':blue[Authorizing {account}]')
+                client = authorize_client(account)
+                st.write(f'Trying to fetch records using {account}')
+                if 'theory' not in st.session_state:
+                    theory_sheet = client.open(sheet_name).worksheet('Theory')
+                    st.write("Theory worksheet found")
+                    theory_data = theory_sheet.get(theory_frame)
+                    st.write("Theory data downloaded")
+                    theory_dataframe = df_with_header(theory_data)
+                    st.write("Theory data formatted")
+                    st.session_state.theory = theory_dataframe
+                    st.write(f':green[Fetched Theory records using {account}]')
+                    fetched += 1
+                    status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                for batch in batch_sessions:
+                    if batch not in st.session_state:
+                        dataframes_sheet = client.open(sheet_name).worksheet(batch)
+                        st.write(f'{batch} worksheet found')
+                        dataframes_data = dataframes_sheet.batch_get(dataframes)
+                        st.write(f'{batch} data downloaded')
+                        batch_dataframes = []
+                        for data in dataframes_data:
+                            batch_dataframes += [df_with_header(data)]
+                        st.write(f'{batch} data formatted')
+                        st.session_state[batch] = batch_dataframes
+                        st.write(f':green[Fetched {batch} records using {account}]')
+                        fetched += 1
+                        status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                if 'scores' not in st.session_state or 'score_news_update' not in st.session_state:
+                    scores_sheet = client.open(sheet_name).worksheet('Scores')
+                    st.write('Scores worksheet found')
+                    scores_data = scores_sheet.batch_get(scores_frames)
+                    st.write('Scores data downloaded')
+                    scores_dataframe = df_with_header(scores_data[0])
+                    score_news_update = scores_data[1][0][0]
+                    st.write('Scores data formatted')
+                    st.session_state.scores = scores_dataframe
+                    st.session_state.score_news_update = score_news_update
+                    st.write(f':green[Fetched Scores records using {account}]')
+                    fetched += 1
+                    status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                st.session_state.data_pulled = True
+                status.update(label=f":green[Fetched 4 / 4 records! Click to see status log]", state="complete", expanded=False)
+                return True
+            except:
+                i += 1
+                st.write(f':red[Could not fetch records using {account}]')
+                status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                continue
+    status.update(label=f":red[Failed to fetch all records. Fetched {fetched} / 4 records. Click to see error log]", state="error", expanded=False)
+    return False
     
 
 # Display eligibility criteria for attendance
@@ -289,14 +339,14 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 1.4", icon="ℹ️")
+        st.info(" Version 1.5", icon="ℹ️")
 
 
 # Render disclaimers
 def disclaimers():
     st.write('''** Please note that these records are made available provisionally 
              for your reference, by the Department of Physiology. 
-             All the records are for the subject of Physiology only. ''')
+             All the records are for the subject of Physiology and for the batch of 2023-24 only. ''')
 
     st.write('''** The records are not guaranteed to be completely accurate.
              In case of any inconsistencies with our physical records, the physical records shall be considered final.
@@ -316,4 +366,21 @@ def developers_note():
              You can write to me anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8 ''')
 
     st.write('''** - Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately)''')
+
+
+# Error message when failed to fetch records
+def failed_to_fetch():
+    st.error(' Could not fetch all the records', icon="⚠️")
+    st.info(''' The most likely cause for this error is that the google server limits have been reached.
+            The limits are refreshed every minute. Please try again after a couple of minutes. ''', icon="ℹ️")
+    st.info(''' The app currently supports upto 285 simultaneous users per minute. 
+            If more than 285 users try to fetch records over the same 60 seconds interval, 
+            some users may fail to fetch some or all sets of records at the same time.
+            You can review your error log to see which records failed to fetch. ''', icon="ℹ️")
+    st.info(''' If this error persists, or you encounter it very frequently, kindly notify me. 
+            If possible, please include the error log above to help me debug.
+            I will try to fix it or expand the limits on simultaneous users. 
+            You can write to me anonymously using this google form : 
+            https://forms.gle/yCE9FAEyyQ5iDEgR8 ''', icon="ℹ️")
+    st.info(''' Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately) ''', icon="🌟")
 

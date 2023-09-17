@@ -3,7 +3,7 @@ from helpers import *
 from datetime import date
 
 # Title of the app
-st.title('Student Record Viewer')
+st.title('Student Record Viewer 2023-24')
 
 # Instructions
 st.info(''' Enter your Roll Number''', icon="ℹ️")
@@ -39,17 +39,12 @@ if st.session_state.valid_roll_number and not st.session_state.data_pulled:
     with st.spinner(''' Fetching student records. This happens only once and may take a few seconds.
                     Once the data is fetched, your subsequent checks will be instantaneous. '''):
         try:
-            load_student_data()
-            st.session_state.data_pulled = True
+            load_data = load_student_data()
+            if not load_data or not st.session_state.data_pulled:
+                raise Exception
             st.session_state.data_date = date.today().strftime("%d/%m/%Y")
         except:
-            st.error(' Could not fetch the records', icon="⚠️")
-            st.info(''' The most likely cause is that the google server limits have been reached.
-                    They are refreshed once every 100 seconds. Please try again after a couple of minutes.
-                    If this error persists, kindly notify me. 
-                    You can write to me anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8
-
-                    - Dr Suraj, your friendly neighborhood web developer. ''', icon="ℹ️")
+            failed_to_fetch()
 
 # Columns for flashing messages
 info1, info2 = st.columns([1,1])
@@ -74,17 +69,17 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
     # Scores block
     st.warning('##### Scores')
     # Scores update news
-    st.write('''###### No assessments have been conducted yet. Check back here for updates as they come. ''')
+    st.write(f'''###### {st.session_state.score_news_update} ''')
     scores_eligibility_criteria()
     render_scores(roll_number)
 
     # Celebrate if eligible
-    if st.session_state.eligible:
-        with warn:
-            st.success('All eligibility criteria met! All the best for the exam!', icon="🌟")
-        st.balloons()
-    else:
-        pass
+    #if st.session_state.eligible:
+      #  with warn:
+       #     st.success('All eligibility criteria met! All the best for the exam!', icon="🌟")
+      #  st.balloons()
+   # else:
+      #  pass
         #with warn:
            # st.warning('You do not fulfil certain eligibility criteria', icon="⚠️")
        
