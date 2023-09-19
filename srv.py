@@ -3,7 +3,7 @@ from helpers import *
 from datetime import date
 
 # Title of the app
-st.title('Student Record Viewer 2023-24')
+st.title('Student Record Viewer Physiology 2023-24')
 
 # Instructions
 st.info(''' Enter your Roll Number''', icon="ℹ️")
