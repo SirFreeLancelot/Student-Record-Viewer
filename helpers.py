@@ -3,6 +3,7 @@ import gspread
 import pandas as pd
 from google.oauth2 import service_account
 import random
+import base64
 
 sheet_name = "Student Record Manager"
 
@@ -12,6 +13,8 @@ cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 
 # Frames must match possible batch ranges
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
+name_frame = "B1:C251"
+house_frame = "A1:F6"
 theory_frame = "D1:GU251"
 scores_frames = ["B2:Z253", "B255"]
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
@@ -22,6 +25,18 @@ theory_scores = ['Theory 1','Theory 2','Theory 3','Viva 1','Viva 2',
                  'MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism']
 practical_scores = ['Practical 1','Practical 2','Practical 3','Record',
                     'Skill Certification','ECE','Assignment','Pr Professionalism']
+
+# List of houses
+houses_list = ['Blackburn', 'Adelbert', 'Langendorff', 'Landsteiner', 'Sherrington']
+
+# Scientists and their wikipedia pages
+scientists = {
+    "Elizabeth Blackburn": "https://en.wikipedia.org/wiki/Elizabeth_Blackburn",
+    "Adelbert Ames Jr.": "https://en.wikipedia.org/wiki/Adelbert_Ames_Jr.",
+    "Oskar Langendorff": "https://en.wikipedia.org/wiki/Oskar_Langendorff",
+    "Karl Landsteiner": "https://en.wikipedia.org/wiki/Karl_Landsteiner",
+    "Charles Scott Sherrington": "https://en.wikipedia.org/wiki/Charles_Scott_Sherrington"
+}
 
 
 # Cache google sheet credentials
@@ -66,13 +81,35 @@ def load_student_data():
         random.shuffle(accounts)
     i = 1
     fetched = 0
-    with st.status(f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]", expanded=False) as status:
+    with st.status(f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]", expanded=False) as status:
         while i <= number_of_accounts and st.session_state.data_pulled == False:
             account = accounts[i-1]
             try:
                 st.write(f':blue[Authorizing {account}]')
                 client = authorize_client(account)
                 st.write(f'Trying to fetch records using {account}')
+                if 'houses' not in st.session_state:
+                    house_sheet = client.open(sheet_name).worksheet('Houses')
+                    st.write("House worksheet found")
+                    house_data = house_sheet.get(house_frame)
+                    st.write("House data downloaded")
+                    house_dataframe = df_with_header(house_data)
+                    st.write("House data formatted")
+                    st.session_state.houses = house_dataframe
+                    st.write(f':green[Fetched House records using {account}]')
+                    fetched += 1
+                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                if 'names' not in st.session_state:
+                    name_sheet = client.open(sheet_name).worksheet('Eligibility')
+                    st.write("Name worksheet found")
+                    name_data = name_sheet.get(name_frame)
+                    st.write("Name data downloaded")
+                    name_dataframe = df_with_header(name_data)
+                    st.write("Name data formatted")
+                    st.session_state.names = name_dataframe
+                    st.write(f':green[Fetched Name records using {account}]')
+                    fetched += 1
+                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
                 if 'theory' not in st.session_state:
                     theory_sheet = client.open(sheet_name).worksheet('Theory')
                     st.write("Theory worksheet found")
@@ -83,7 +120,7 @@ def load_student_data():
                     st.session_state.theory = theory_dataframe
                     st.write(f':green[Fetched Theory records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
                 for batch in batch_sessions:
                     if batch not in st.session_state:
                         dataframes_sheet = client.open(sheet_name).worksheet(batch)
@@ -97,7 +134,7 @@ def load_student_data():
                         st.session_state[batch] = batch_dataframes
                         st.write(f':green[Fetched {batch} records using {account}]')
                         fetched += 1
-                        status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                        status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
                 if 'scores' not in st.session_state or 'score_news_update' not in st.session_state:
                     scores_sheet = client.open(sheet_name).worksheet('Scores')
                     st.write('Scores worksheet found')
@@ -110,16 +147,16 @@ def load_student_data():
                     st.session_state.score_news_update = score_news_update
                     st.write(f':green[Fetched Scores records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
                 st.session_state.data_pulled = True
-                status.update(label=f":green[Fetched 4 / 4 records! Click to see status log]", state="complete", expanded=False)
+                status.update(label=f":green[Fetched 6 / 6 records! Click to see status log]", state="complete", expanded=False)
                 return True
             except:
                 i += 1
                 st.write(f':red[Could not fetch records using {account}]')
-                status.update(label=f":blue[Fetched {fetched} / 4 records. Trying Reader {i} / {number_of_accounts}]")
+                status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
                 continue
-    status.update(label=f":red[Failed to fetch all records. Fetched {fetched} / 4 records. Click to see error log]", state="error", expanded=False)
+    status.update(label=f":red[Failed to fetch all records. Fetched {fetched} / 6 records. Click to see error log]", state="error", expanded=False)
     return False
     
 
@@ -161,6 +198,36 @@ def scores_eligibility_criteria():
         st.write(f''' 7. Practical FA (max. 20) = (Record + Skill Certification + ECE + Assignment + Pr Professionalism) 
                          scaled to 20.''')
         st.write(f''' Key: IA - Internal Assessment; FA - Formative Assessment; MCQ - Multiple Choice Questions''')
+
+
+# Render house leaderboard
+def render_leaderboard():
+    houses = st.session_state.houses
+    st.image('images/Blackburn.png')
+    st.warning('House Leaderboard', icon="📊")
+    st.dataframe(houses, hide_index=True)
+    with st.expander("Scoring Criteria"):
+        st.write(f''' Each house will be assigned a score, maximum being 1000, calculated as follows: ''')
+        st.write(f''' Total = Attendance + Scores + Bonus ''')
+        st.write(f''' 1. The Attendance component is calculated as the average attendance 
+                of all 50 students of the house, in all the sessions. This can be a maximum of 400. ''')
+        st.write(f''' 2. The Scores component is calculated as the average score 
+                of all 50 students of the house, in all the assessments. This can be a maximum of 400. ''')
+        st.write(f''' 3. The Bonus component is awarded in recognition of achievements of the house members 
+                 or deducted as disciplinary action at the discretion of the department. 
+                 100 points are given to every house at the beginning. This can be a maximum of 200. ''')
+    with st.expander("The Scientists That Inspired The House Names"):
+        for scientist, url in scientists.items():
+            st.markdown(f"[{scientist}]({url})")
+
+
+# Render student profile
+def render_profile(roll_number):
+    names = st.session_state.names
+    name = names['Name'][roll_number-1]
+    st.info(f'HI, {name} !', icon="👋")
+    house = houses_list[((roll_number - 1) % 50) // 10]
+    st.image(f'images/{house}.png')
 
 
 # Render theory attendance
@@ -339,8 +406,10 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 1.5", icon="ℹ️")
+        st.info(" Version 2.0", icon="ℹ️")
 
+    st.write('''** House emblems created by Dr Hudson ''')
+    
 
 # Render disclaimers
 def disclaimers():
@@ -372,9 +441,10 @@ def developers_note():
 def failed_to_fetch():
     st.error(' Could not fetch all the records', icon="⚠️")
     st.info(''' The most likely cause for this error is that the google server limits have been reached.
-            The limits are refreshed every minute. Please try again after a couple of minutes. ''', icon="ℹ️")
-    st.info(''' The app currently supports upto 285 simultaneous users per minute. 
-            If more than 285 users try to fetch records over the same 60 seconds interval, 
+            The limits are refreshed every minute. 
+            Please refresh the page and try again after a couple of minutes. ''', icon="ℹ️")
+    st.info(''' The app supports a limited number of simultaneous users per minute. 
+            If too many users try to fetch records over the same 60 seconds interval, 
             some users may fail to fetch some or all sets of records at the same time.
             You can review your error log to see which records failed to fetch. ''', icon="ℹ️")
     st.info(''' If this error persists, or you encounter it very frequently, kindly notify me. 
