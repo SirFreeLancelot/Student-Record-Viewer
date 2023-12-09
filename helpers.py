@@ -3,7 +3,6 @@ import gspread
 import pandas as pd
 from google.oauth2 import service_account
 import random
-import base64
 
 sheet_name = "Student Record Manager"
 
@@ -14,7 +13,7 @@ cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 # Frames must match possible batch ranges
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
 name_frame = "B1:C251"
-house_frame = "A1:F6"
+house_frames = ["A1:F6", "A11:M261", "A266:H316", "J266:Q316", "S266:Z316", "AB266:AI316", "AK266:AR316"]
 theory_frame = "D1:GU251"
 scores_frames = ["B2:Z253", "B255"]
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
@@ -28,8 +27,11 @@ practical_scores = ['Practical 1','Practical 2','Practical 3','Record',
 
 # List of houses
 houses_list = ['Blackburn', 'Adelbert', 'Langendorff', 'Landsteiner', 'Sherrington']
+global_leaderboard_columns = ['Roll No.', 'Attnd (%)', 'Att Rank', 'Tot Score', 'Score Rank']
+house_leaderboard_columns = ['Roll No.', 'Attnd (%)', 'Att Rnk Glb', 'Att Rnk Hs', 
+                             'Tot Scr', 'Scr Rnk Glb', 'Scr Rnk Hs']
 
-# Scientists and their wikipedia pages
+# Scientists and their wikipedia pages 
 scientists = {
     "Elizabeth Blackburn": "https://en.wikipedia.org/wiki/Elizabeth_Blackburn",
     "Adelbert Ames Jr.": "https://en.wikipedia.org/wiki/Adelbert_Ames_Jr.",
@@ -90,12 +92,14 @@ def load_student_data():
                 st.write(f'Trying to fetch records using {account}')
                 if 'houses' not in st.session_state:
                     house_sheet = client.open(sheet_name).worksheet('Houses')
-                    st.write("House worksheet found")
-                    house_data = house_sheet.get(house_frame)
-                    st.write("House data downloaded")
-                    house_dataframe = df_with_header(house_data)
-                    st.write("House data formatted")
-                    st.session_state.houses = house_dataframe
+                    st.write("Leaderboard worksheet found")
+                    house_data = house_sheet.batch_get(house_frames)
+                    st.write("Leaderboard data downloaded")
+                    leaderboard_dataframes = []
+                    for data in house_data:
+                        leaderboard_dataframes.append(df_with_header(data))
+                    st.write("Leaderboard data formatted")
+                    st.session_state.houses = leaderboard_dataframes
                     st.write(f':green[Fetched House records using {account}]')
                     fetched += 1
                     status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
@@ -203,9 +207,9 @@ def scores_eligibility_criteria():
 # Render house leaderboard
 def render_leaderboard():
     houses = st.session_state.houses
-    st.image('images/Blackburn.png')
+    st.image('images/Common.png')
     st.warning('House Leaderboard', icon="📊")
-    st.dataframe(houses, hide_index=True)
+    st.dataframe(houses[0], hide_index=True)
     with st.expander("Scoring Criteria"):
         st.write(f''' Each house will be assigned a score, maximum being 1000, calculated as follows: ''')
         st.write(f''' Total = Attendance + Scores + Bonus ''')
@@ -216,6 +220,16 @@ def render_leaderboard():
         st.write(f''' 3. The Bonus component is awarded in recognition of achievements of the house members 
                  or deducted as disciplinary action at the discretion of the department. 
                  100 points are given to every house at the beginning. This can be a maximum of 200. ''')
+    st.warning('Global Leaderboard', icon="📊")
+    with st.expander("How to read the global leaderboard?"):
+        st.write(''' You can interact with the table by scrolling.
+                 Clicking on the column heads lets you sort through the leaderboard. ''')
+        st.write(''' The Ranking is based on relative individual attendance 
+                 and internals scores of all 250 students. See you at the top! ''')
+    leaderboard = houses[1]
+    for column in global_leaderboard_columns:
+        leaderboard[column] = pd.to_numeric(leaderboard[column])
+    st.dataframe(leaderboard.loc[:, global_leaderboard_columns], hide_index=True)
     with st.expander("The Scientists That Inspired The House Names"):
         for scientist, url in scientists.items():
             st.markdown(f"[{scientist}]({url})")
@@ -224,10 +238,27 @@ def render_leaderboard():
 # Render student profile
 def render_profile(roll_number):
     names = st.session_state.names
+    houses = st.session_state.houses
     name = names['Name'][roll_number-1]
     st.info(f'HI, {name} !', icon="👋")
-    house = houses_list[((roll_number - 1) % 50) // 10]
+    index_hash = ((roll_number - 1) % 50) // 10
+    house = houses_list[index_hash]
+    leaderboard = houses[index_hash + 2]
+    leaderboard['Tot Att'] = pd.to_numeric(leaderboard['Tot Att'])
+    leaderboard['Tot Class'] = pd.to_numeric(leaderboard['Tot Class'])
+    leaderboard['Attnd (%)'] = round(leaderboard['Tot Att'] * 100 / leaderboard['Tot Class'], 2).astype(float)
     st.image(f'images/{house}.png')
+    st.warning('House Leaderboard', icon="📊")
+    with st.expander("How to read the house leaderboard?"):
+        st.write(''' You can interact with the table by scrolling.
+                 Clicking on the column heads lets you sort through the leaderboard. ''')
+        st.write(''' The Ranking is based on relative individual attendance 
+                 and internals scores of the 50 students in the house. 
+                 The leaderboard indicates both the global and intra-house rankings. 
+                 See you at the top! ''')
+    for column in house_leaderboard_columns:
+        leaderboard[column] = pd.to_numeric(leaderboard[column])
+    st.dataframe((houses[index_hash + 2]).loc[:, house_leaderboard_columns], hide_index=True)
 
 
 # Render theory attendance
@@ -406,7 +437,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.0", icon="ℹ️")
+        st.info(" Version 2.1", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
