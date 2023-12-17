@@ -223,9 +223,16 @@ def render_leaderboard():
     st.warning('Global Leaderboard', icon="📊")
     with st.expander("How to read the global leaderboard?"):
         st.write(''' You can interact with the table by scrolling.
-                 Clicking on the column heads lets you sort through the leaderboard. ''')
+                 Clicking on the column heads lets you sort through the leaderboard on that column. ''')
         st.write(''' The Ranking is based on relative individual attendance 
                  and internals scores of all 250 students. See you at the top! ''')
+        st.write(f''' The columns are as follows:''')
+        st.write(f''' 1. Roll No. - Roll number of the student. ''')
+        st.write(f''' 2. Attnd (%) - Average attendance of the student, in percentage,
+                 across all the sessions. ''')
+        st.write(f''' 3. Att Rank - Ranking of the student out of 250, based on average attendance. ''')
+        st.write(f''' 4. Tot Score - Total score of the student across all internal assessments. ''')
+        st.write(f''' 5. Score Rank - Ranking of the student out of 250, based on total score. ''')
     leaderboard = houses[1]
     for column in global_leaderboard_columns:
         leaderboard[column] = pd.to_numeric(leaderboard[column])
@@ -247,6 +254,8 @@ def render_profile(roll_number):
     leaderboard['Tot Att'] = pd.to_numeric(leaderboard['Tot Att'])
     leaderboard['Tot Class'] = pd.to_numeric(leaderboard['Tot Class'])
     leaderboard['Attnd (%)'] = round(leaderboard['Tot Att'] * 100 / leaderboard['Tot Class'], 2).astype(float)
+    for column in house_leaderboard_columns:
+        leaderboard[column] = pd.to_numeric(leaderboard[column])
     st.image(f'images/{house}.png')
     st.warning('House Leaderboard', icon="📊")
     with st.expander("How to read the house leaderboard?"):
@@ -256,8 +265,15 @@ def render_profile(roll_number):
                  and internals scores of the 50 students in the house. 
                  The leaderboard indicates both the global and intra-house rankings. 
                  See you at the top! ''')
-    for column in house_leaderboard_columns:
-        leaderboard[column] = pd.to_numeric(leaderboard[column])
+        st.write(f''' The columns are as follows:''')
+        st.write(f''' 1. Roll No. - Roll number of the student. ''')
+        st.write(f''' 2. Attnd (%) - Average attendance of the student, in percentage,
+                 across all the sessions. ''')
+        st.write(f''' 3. Att Rnk Glb - Global Ranking of the student out of 250, based on average attendance. ''')
+        st.write(f''' 4. Att Rnk Hs - Intra-House Ranking of the student out of 50, based on average attendance. ''')
+        st.write(f''' 5. Tot Scr - Total score of the student across all internal assessments. ''')
+        st.write(f''' 6. Scr Rnk Glb - Global Ranking of the student out of 250, based on total score. ''')
+        st.write(f''' 7. Scr Rnk Hs - Intra-House Ranking of the student out of 50, based on total score. ''')
     st.dataframe((houses[index_hash + 2]).loc[:, house_leaderboard_columns], hide_index=True)
 
 
@@ -269,7 +285,7 @@ def render_theory(roll_number):
         st.write(f"###### Theory : No theory classes conducted yet")
         return
     att_str = ''
-    abs_list = [f'(s.no. | dd-mm | time)']
+    abs_list = [f'(s.no. | yyyy-mm-dd | hh-hh)']
     total = 0
     attended = 0
     errors = 0
@@ -318,9 +334,9 @@ def render_attendance(roll_number):
             st.write(f"###### {batch} : No {batch} sessions conducted yet")
             continue
         att_str = ''
-        abs_list = ['(s.no. | dd-mm | time)']
+        abs_list = ['(s.no. | yyyy-mm-dd | hh-hh)']
         if batch == 'Practical':
-            abs_list = ['(s.no. | dd-mm | time | session)']
+            abs_list = ['(s.no. | yyyy-mm-dd | hh-hh | session)']
         total = 0
         attended = 0
         errors = 0
@@ -437,7 +453,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.1", icon="ℹ️")
+        st.info(" Version 2.2", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
