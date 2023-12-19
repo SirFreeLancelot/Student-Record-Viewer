@@ -79,8 +79,8 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
         st.warning('##### Scores')
         # Scores update news
         st.write(f'''###### {st.session_state.score_news_update} ''')
-        scores_eligibility_criteria()
         render_scores(roll_number)
+        scores_eligibility_criteria()
        
 
 signatures()

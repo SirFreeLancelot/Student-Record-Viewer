@@ -3,6 +3,7 @@ import gspread
 import pandas as pd
 from google.oauth2 import service_account
 import random
+import re
 
 sheet_name = "Student Record Manager"
 
@@ -398,6 +399,40 @@ def render_scores(roll_number):
     student_scores = {}
     for column in scores_columns:
         student_scores[column] = f'{scores[column][roll_number-1]} / {scores[column][250]}'
+
+    news = st.session_state.score_news_update
+
+    # Extract elements within parentheses using regular expression
+    matches = re.findall(r'\(([^)]+)\)', news)
+
+    # Separate the matches into two lists
+    if len(matches) >= 2:
+        theory_list = matches[0].split(', ')
+        practical_list = matches[1].split(', ')
+    else:
+        # Handle the case where there are not enough matches
+        theory_list = []
+        practical_list = []
+    
+    col1, col2 = st.columns(2)
+    
+    if len(theory_list) > 0:
+        theory_dict = {'Theory': [], 'Score': []}
+        for match in theory_list:
+            theory_dict['Theory'].append(match)
+            theory_dict['Score'].append(student_scores[match])
+        theory_df = pd.DataFrame(theory_dict)
+        with col1:
+            st.dataframe(theory_df, hide_index=True)
+
+    if len(practical_list) > 0:
+        practical_dict = {'Practical': [], 'Score': []}
+        for match in practical_list:
+            practical_dict['Practical'].append(match)
+            practical_dict['Score'].append(student_scores[match])
+        practical_df = pd.DataFrame(practical_dict)
+        with col2:
+            st.dataframe(practical_df, hide_index=True)
     
     # Check eligibility
     if int(scores['Aggregate'][roll_number-1]) < 50:
@@ -428,22 +463,30 @@ def render_scores(roll_number):
         st.write("3. Aggregate Score : TBD")
     
     # Display theory scores
-    with st.expander("Theory Scores"):
+    with st.expander("Your Theory Scores"):
+        theory_scores_dict = {'Assessment': [], 'Score': []}
         for column in theory_scores:
+            theory_scores_dict['Assessment'].append(column)
             zeroes = scores[column].tolist().count('0')
             if zeroes == 250:
-                st.write(f"{column} : TBD")
+                theory_scores_dict['Score'].append('TBD')
             else:
-                st.write(f"{column} : {student_scores[column]}")
+                theory_scores_dict['Score'].append(student_scores[column])
+        theory_scores_df = pd.DataFrame(theory_scores_dict)
+        st.dataframe(theory_scores_df, hide_index=True)
     
     # Display practical scores
-    with st.expander("Practical Scores"):
+    with st.expander("Your Practical Scores"):
+        practical_scores_dict = {'Assessment': [], 'Score': []}
         for column in practical_scores:
+            practical_scores_dict['Assessment'].append(column)
             zeroes = scores[column].tolist().count('0')
             if zeroes == 250:
-                st.write(f"{column} : TBD")
+                practical_scores_dict['Score'].append('TBD')
             else:
-                st.write(f"{column} : {student_scores[column]}")
+                practical_scores_dict['Score'].append(student_scores[column])
+        practical_scores_df = pd.DataFrame(practical_scores_dict)
+        st.dataframe(practical_scores_df, hide_index=True)
 
 
 # Render signatures
@@ -453,7 +496,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.2", icon="ℹ️")
+        st.info(" Version 2.3", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
