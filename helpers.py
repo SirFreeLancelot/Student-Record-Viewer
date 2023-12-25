@@ -437,7 +437,7 @@ def render_scores(roll_number):
             st.dataframe(practical_df, hide_index=True)
     
     # Check eligibility
-    if int(scores['Aggregate'][roll_number-1]) < 50:
+    if float(scores['Aggregate'][roll_number-1]) < 50:
         st.session_state.eligible = False
         aggregate_eligibility = '🔴 :red[Not Eligible]'
     else:
