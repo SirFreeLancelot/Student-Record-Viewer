@@ -16,15 +16,16 @@ dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
 name_frame = "B1:C251"
 house_frames = ["A1:F6", "A11:M261", "A266:H316", "J266:Q316", "S266:Z316", "AB266:AI316", "AK266:AR316"]
 theory_frame = "D1:GU251"
-scores_frames = ["B2:Z253", "B255"]
+scores_frames = ["B2:AC253", "B255"]
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
                   'Viva 1','Viva 2','MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism',
                   'Practical Total','Practical IA','Practical FA','Practical 1','Practical 2','Practical 3',
                   'Record','Skill Certification','ECE','Assignment','Pr Professionalism']
 theory_scores = ['Theory 1','Theory 2','Theory 3','Viva 1','Viva 2',
                  'MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism']
-practical_scores = ['Practical 1','Practical 2','Practical 3','Record',
-                    'Skill Certification','ECE','Assignment','Pr Professionalism']
+practical_scores = ['Practical 1','Practical 2','Practical 3',
+                    'Class Test 1', 'Class Test 2', 'Class Test 3',
+                    'Record', 'Skill Certification','ECE','Assignment','Pr Professionalism']
 
 # List of houses
 houses_list = ['Blackburn', 'Adelbert', 'Langendorff', 'Landsteiner', 'Sherrington']
@@ -200,7 +201,7 @@ def scores_eligibility_criteria():
                          All three scores Practical 1, 2 and 3 are scaled to 80. ''')
         st.write(f''' 6. Theory FA (max. 20) = (Viva 1 + Viva 2 + MCQ 1 + MCQ 2 + MCQ 3 + Seminar + Th Professionalism) 
                          scaled to 20.''')
-        st.write(f''' 7. Practical FA (max. 20) = (Record + Skill Certification + ECE + Assignment + Pr Professionalism) 
+        st.write(f''' 7. Practical FA (max. 20) = (Class Test 1 + Class Test 2 + Class Test 3 + Record + Skill Certification + ECE + Assignment + Pr Professionalism) 
                          scaled to 20.''')
         st.write(f''' Key: IA - Internal Assessment; FA - Formative Assessment; MCQ - Multiple Choice Questions''')
 
@@ -496,7 +497,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.3", icon="ℹ️")
+        st.info(" Version 2.4", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
