@@ -20,6 +20,7 @@ scores_frames = ["B2:AC253", "B255"]
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
                   'Viva 1','Viva 2','MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism',
                   'Practical Total','Practical IA','Practical FA','Practical 1','Practical 2','Practical 3',
+                  'Class Test 1', 'Class Test 2', 'Class Test 3',
                   'Record','Skill Certification','ECE','Assignment','Pr Professionalism']
 theory_scores = ['Theory 1','Theory 2','Theory 3','Viva 1','Viva 2',
                  'MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism']
@@ -497,7 +498,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.4", icon="ℹ️")
+        st.info(" Version 2.5", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
