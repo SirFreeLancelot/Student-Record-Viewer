@@ -13,7 +13,7 @@ cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 
 # Frames must match possible batch ranges
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
-name_frame = "B1:C251"
+name_frame = "B1:D251"
 house_frames = ["A1:F6", "A11:M261", "A266:H316", "J266:Q316", "S266:Z316", "AB266:AI316", "AK266:AR316"]
 theory_frame = "D1:GU251"
 scores_frames = ["B2:AC253", "B255"]
