@@ -12,6 +12,8 @@ if 'data_date' not in st.session_state:
     st.session_state.data_date = ''
 if 'eligible' not in st.session_state:
     st.session_state.eligible = False
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 
 
 # Title of the app
@@ -65,7 +67,18 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
     with tab1:
         # Profile tab
         st.warning('##### Student Profile')
-        render_profile(roll_number)
+        # Ask for password
+        if not st.session_state.authenticated:
+            password = st.text_input("Password")
+            st.warning('Enter the password to access profile information', icon="⚠️")
+            # Check if password is correct
+            if password == st.secrets['password']:
+                st.session_state.authenticated = True
+                st.experimental_rerun()
+        # Display profile if password is correct
+        if st.session_state.authenticated:
+            render_profile(roll_number)
+            
 
     with tab2:
         # Attendance tab
