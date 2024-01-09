@@ -250,7 +250,9 @@ def render_profile(roll_number):
     names = st.session_state.names
     houses = st.session_state.houses
     name = names['Name'][roll_number-1]
+    reg_no = names['Reg No'][roll_number-1]
     st.info(f'HI, {name} !', icon="👋")
+    st.info(f'Reg. No. - {reg_no}', icon="👨‍⚕️")
     index_hash = ((roll_number - 1) % 50) // 10
     house = houses_list[index_hash]
     leaderboard = houses[index_hash + 2]
@@ -337,7 +339,8 @@ def render_attendance(roll_number):
             st.write(f"###### {batch} : No {batch} sessions conducted yet")
             continue
         att_str = ''
-        abs_list = ['(s.no. | yyyy-mm-dd | hh-hh)']
+        if batch == 'AETCOM':
+            abs_list = ['(s.no. | yyyy-mm-dd | module)']
         if batch == 'Practical':
             abs_list = ['(s.no. | yyyy-mm-dd | hh-hh | session)']
         total = 0
@@ -359,10 +362,9 @@ def render_attendance(roll_number):
         if total == attended:
             abs_list = [' :green[No absences! Keep it up!] ']
 
-        total = total * 2
-        attended = attended * 2
-
         if batch == 'Practical':
+            total = total * 2
+            attended = attended * 2
             for date in date_columns:
                 if date[-3:] == 'ECE':
                     if data[date][(roll_number-1) % 50] == 'P':
@@ -418,23 +420,29 @@ def render_scores(roll_number):
     
     col1, col2 = st.columns(2)
     
-    if len(theory_list) > 0:
-        theory_dict = {'Theory': [], 'Score': []}
-        for match in theory_list:
-            theory_dict['Theory'].append(match)
-            theory_dict['Score'].append(student_scores[match])
-        theory_df = pd.DataFrame(theory_dict)
-        with col1:
-            st.dataframe(theory_df, hide_index=True)
+    try:
+        if len(theory_list) > 0:
+            theory_dict = {'Theory': [], 'Score': []}
+            for match in theory_list:
+                theory_dict['Theory'].append(match)
+                theory_dict['Score'].append(student_scores[match])
+            theory_df = pd.DataFrame(theory_dict)
+            with col1:
+                st.dataframe(theory_df, hide_index=True)
+    except:
+        pass
 
-    if len(practical_list) > 0:
-        practical_dict = {'Practical': [], 'Score': []}
-        for match in practical_list:
-            practical_dict['Practical'].append(match)
-            practical_dict['Score'].append(student_scores[match])
-        practical_df = pd.DataFrame(practical_dict)
-        with col2:
-            st.dataframe(practical_df, hide_index=True)
+    try:
+        if len(practical_list) > 0:
+            practical_dict = {'Practical': [], 'Score': []}
+            for match in practical_list:
+                practical_dict['Practical'].append(match)
+                practical_dict['Score'].append(student_scores[match])
+            practical_df = pd.DataFrame(practical_dict)
+            with col2:
+                st.dataframe(practical_df, hide_index=True)
+    except:
+        pass
     
     # Check eligibility
     if float(scores['Aggregate'][roll_number-1]) < 50:
@@ -498,7 +506,7 @@ def signatures():
     with sign1:
         st.success(" Developed by Dr Suraj", icon="🌟")
     with sign2:
-        st.info(" Version 2.5", icon="ℹ️")
+        st.info(" Version 2.6", icon="ℹ️")
 
     st.write('''** House emblems created by Dr Hudson ''')
     
