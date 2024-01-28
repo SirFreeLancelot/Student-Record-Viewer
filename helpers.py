@@ -8,7 +8,7 @@ import google.generativeai as genai
 from streamlit_card import card
 import base64
 
-sheet_name = "Student Record Manager"
+sheet_name = st.secrets['sheet_name']
 
 # Names must match worksheet names
 batch_sessions = ["Practical", "AETCOM"]
@@ -605,8 +605,7 @@ def ai_disclaimers():
 
     st.write(f''' 📜 If you find that the responses are being inaccurate most of the time, 
              please write to me so that I can tweak the prompts. Include the response, if possible.
-             You can either text me on WhatsApp or write to me 
-             anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8 ''')
+             You can find my contact details in the developer's note below. ''' )
 
     st.write(''' 📜 Your attendance and scores are shared with the AI for generating the feedback.
              No sensitive personal information like your name or register number is shared. ''')
@@ -659,45 +658,76 @@ def ai_query(limit):
     aetcom_attendance = st.session_state.AETCOM_attendance
     student_scores = st.session_state.student_scores
     scores_part_of_query = "The student's theory scores are - "
-    assessments_to_be_conducted = f"The theory assessments yet to be conducted are - "
+    theory_pending = []
     for assessment in theory_scores:
         if student_scores[assessment] != 'TBD':
             scores_part_of_query += f'{assessment} : {student_scores[assessment]}, '
         else:
-            assessments_to_be_conducted += f'{assessment}, '
+            theory_pending.append(assessment)
     scores_part_of_query += f". The student's practical scores are - "
-    assessments_to_be_conducted = f". The practical assessments yet to be conducted are - "
+    practical_pending = []
     for assessment in practical_scores:
         if student_scores[assessment] != 'TBD':
             scores_part_of_query += f'{assessment} : {student_scores[assessment]}, '
         else:
-            assessments_to_be_conducted += f'{assessment}, '
-    scores_part_of_query += f"."
-    assessments_to_be_conducted = f"."
+            practical_pending.append(assessment)
+    assessments_status = ""
+    if theory_pending or practical_pending:
+        assessments_status = ''' Some assessments have not been conducted yet.
+                            The student must be consistent in his performance in the upcoming assessments
+                            to get the required total marks to be eligible to write the university exams. '''
+        if theory_pending:
+            assessments_status += f''' Theory assessments not yet conducted are: {', '.join(theory_pending)}. '''
+        if practical_pending:
+            assessments_status += f''' Practical assessments not yet conducted are: {', '.join(practical_pending)}. '''
+    else:
+        assessments_status = ''' All assessments have been conducted. The theory total, practical total 
+                            and aggregate scores have been calculated and finalized.
+                            If the student is not eligible, he will have to attempt the remedial
+                            assessments to be eligible to write the university exams. '''
+    if ("Theory 3" not in theory_pending) and ("Practical 3" not in practical_pending):
+        theory_total = student_scores["Theory Total"]
+        practical_total = student_scores["Practical Total"]
+        aggregate = student_scores["Aggregate"]
+        scores_part_of_query += f'''. As most assessments have been conducted, the student's final scores 
+                                have been calculated. The theory total is {theory_total}, 
+                                the practical total is {practical_total}, and the aggregate score is {aggregate}. 
+                                If the student is not eligible, he will have to attempt the remedial assessments 
+                                to be eligible to write the university exams '''
     query = f'''You are a professor of Physiology. You teach 250 medical school students. 
-            You manage the attendance and scores records of the students throughout 3 terms. 
-            The minimum eligibility criteria for appearing in the final examination is that 
-            the student must have attended 75% of theory and AETCOM classes separately, and 
-            80% of practical classes. The internal assessment scores are calculated after considering 
+            You manage the attendance and scores records of the students throughout the year (3 terms). 
+            A student must fulfil all minimum eligibility criteria for attendance and internal assessment scores
+            to be eligible to write the university exams.
+            The criteria for attendance are:
+            1. Theory - 75 %,
+            2. Practical - 80 %,
+            3. AETCOM - 75 %.
+            The criteria for internal assessment scores are:
+            1. Theory Total - 40 %,
+            2. Practical Total - 40 %,
+            3. Aggregate - 50 %.
+            The internal assessment scores are calculated after considering 
             multiple internal assessments conducted throughout 3 terms, numbered 1 to 3 if applicable
-            (for example, MCQ 1, MCQ 2, MCQ 3). 
-            Finally, the student must have at least 40% in theory and 40% in practical, with 50% in aggregate.
+            (for example, MCQ 1, MCQ 2, MCQ 3).
             So, a general rule of thumb is that a score of 50% or higher in each assessment is good.
-            I will now tell you the attendance and scores of the student. I want you to provide him with
+            I will now tell you the attendance and scores of a particular student. 
+            The attendances I provide will be a snapshot of 
+            the current state and more classes may be taken, so an ineligibility can be recovered from.
+            If there are no more classes, remedial classes will be conducted.
+            I will provide the scores of assessments already conducted. 
+            {assessments_status}.
+            The student's attendance in percentages are - theory : {theory_attendance} , 
+            practical : {practical_attendance} , AETCOM : {aetcom_attendance}. 
+            {scores_part_of_query}.
+            I want you to provide the student with
             feedback and insights or recommendations based on his performance. If possible, include comments
             on the trend in his performance over the terms (an assessment will have the term number after 
-            its name if it is conducted multiple times). The attendances I provide will be a snapshot of 
-            the current state and more classes will be taken, so an ineligibility can be recovered from.
-            I will provide the scores of assessments already conducted. Some assessments have not been 
-            conducted yet. {assessments_to_be_conducted} These assessments will be conducted in 
-            the upcoming terms and the student may try to make up for his scores if required.
-            The student's attendance in percentage is - theory : {theory_attendance} , 
-            practical : {practical_attendance} , AETCOM : {aetcom_attendance} 
-            The student's scores are - {scores_part_of_query}.
+            its name if it is conducted multiple times).
             I want you to provide encouragement, feedback or caution to the student as is appropriate. 
             Please phrase your answer as though you are directly addressing the student. 
             Please do not include a greeting at the beginning or sign anything at the end. 
-            Keep it a little informal. Keep the word limit of your response between {word_limit} words. '''
+            Keep it a little informal. Keep the word limit of your response strictly between {word_limit} words. '''
+    #st.write(f'''###### {query}''')
     return query
 
 
@@ -723,7 +753,7 @@ def ai_render(limit):
             st.write(ai_response.text)
         else:
             st.write(" 🔮 The all-seeing magic crystal ball is dreaming. It will be back with you in a minute.")
-            st.write(''' 📜 When the crystal ball is used too frequently, it overheats and goes to sleep.
+            st.write(''' 😴 When the crystal ball is used too frequently, it overheats and goes to sleep.
                      But worry not, it will only take a short nap of 60 seconds. Please try again after a minute.  ''')
 
 
@@ -739,11 +769,11 @@ def render_divination():
                 </style>''', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     with col1:
-        short = st.button("Less!")
+        short = st.button(" 🪄 Less! ")
     with col2:
-        medium = st.button("Divine!")
+        medium = st.button(" 🪄 Divine! ")
     with col3:
-        long = st.button("More!")
+        long = st.button(" 🪄 More! ")
     if short:
         ai_render('short')
     elif long:
@@ -753,8 +783,8 @@ def render_divination():
     else:
         st.write(''' 🪄 You can try generating your feedback multiple times by clicking on the buttons above, 
                 based on how long you want your response to be. ''')
-        with st.expander(" 📜 Disclaimers "):
-            ai_disclaimers()
+    with st.expander(" 📜 Disclaimers "):
+        ai_disclaimers()
 
 
 def format_image_file(image_file):

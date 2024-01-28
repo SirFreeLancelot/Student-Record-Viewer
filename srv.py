@@ -67,7 +67,7 @@ with st.expander(' 💝 Support the App '):
     support_the_app()
 with st.expander(" 💌 Send Feedback "):
     developers_note()
-st.write(' ↔️ scroll through tabs to see more ↔️ ')
+st.write(' ↔️ swipe through tabs to see more ↔️ ')
 
 
 # Validate Roll Number
