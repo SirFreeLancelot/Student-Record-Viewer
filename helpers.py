@@ -4,6 +4,9 @@ import pandas as pd
 from google.oauth2 import service_account
 import random
 import re
+import google.generativeai as genai
+from streamlit_card import card
+import base64
 
 sheet_name = "Student Record Manager"
 
@@ -43,6 +46,10 @@ scientists = {
     "Charles Scott Sherrington": "https://en.wikipedia.org/wiki/Charles_Scott_Sherrington"
 }
 
+# AI response word limit
+word_limits = {'long': '300 to 400', 'medium': '200 to 300', 'short': '100 to 200' }
+
+medals = {'1': '🏅🥇🥇🥇🏅', '2': '🏅🥈🥈🏅', '3': '🏅🥉🏅', '4': '🏅🏅', '5': '🏅'}
 
 # Cache google sheet credentials
 @st.cache_resource
@@ -169,21 +176,23 @@ def load_student_data():
 
 # Display eligibility criteria for attendance
 def attendance_eligibility_criteria():
-    with st.expander("Eligibility Criteria"):
+    # Attendance tab
+    st.warning('##### 🙋‍♂️ Attendance')
+    with st.expander(" 📜 Eligibility Criteria"):
         st.write(f''' 1. Theory Attendance must be at least {cutoff['Theory']}%. 
-                    This includes only theory classes. ''')
+                    This includes only theory classes, each worth 1 hour. ''')
         st.write(f''' 2. Practical Attendance must be at least {cutoff['Practical']}%. 
                     This includes lab sessions, SGDs, ECEs, Skill Certifications.
                     Each session is worth 2 hours, except ECE which is worth 3 hours. ''')
         st.write(f''' 3. AETCOM Attendance must be at least {cutoff['AETCOM']}%. 
-                    This includes only AETCOM sessions, each worth 2 hours. ''')
+                    This includes only AETCOM modules, each worth 1 hour. ''')
         st.write(f''' Key: SGD - Small Group Discussions; ECE - Early Clinical Exposure; 
                       AETCOM - Attitude, Ethics and Communication. ''')
         
 
 # Display eligibility criteria for scores
 def scores_eligibility_criteria():
-    with st.expander("Eligibility Criteria"):
+    with st.expander(" 📜 Eligibility Criteria"):
         st.write(f''' 1. Theory Total must be at least 40%. 
                     This includes average of the three theory internal scores scaled to 80, 
                     and other formative scores scaled to 20. ''')
@@ -192,7 +201,7 @@ def scores_eligibility_criteria():
                     and other formative scores scaled to 20. ''')
         st.write(f''' 3. Aggregate Score must be at least 50%. 
                     This is the average of the theory and practical scores. ''')
-    with st.expander("Scoring Criteria"):
+    with st.expander(" 📜 Scoring Criteria"):
         st.write(f''' 1. Aggregate Score (max. 100) = (Theory Total + Practical Total) / 2 ''')
         st.write(f''' 2. Theory Total (max. 100) = Theory IA + Theory FA ''')
         st.write(f''' 3. Practical Total (max. 100) = Practical IA + Practical FA ''')
@@ -209,61 +218,97 @@ def scores_eligibility_criteria():
 
 # Render house leaderboard
 def render_leaderboard():
+    
     houses = st.session_state.houses
-    st.image('images/Common.png')
-    st.warning('House Leaderboard', icon="📊")
-    st.dataframe(houses[0], hide_index=True)
-    with st.expander("Scoring Criteria"):
-        st.write(f''' Each house will be assigned a score, maximum being 1000, calculated as follows: ''')
-        st.write(f''' Total = Attendance + Scores + Bonus ''')
-        st.write(f''' 1. The Attendance component is calculated as the average attendance 
-                of all 50 students of the house, in all the sessions. This can be a maximum of 400. ''')
-        st.write(f''' 2. The Scores component is calculated as the average score 
-                of all 50 students of the house, in all the assessments. This can be a maximum of 400. ''')
-        st.write(f''' 3. The Bonus component is awarded in recognition of achievements of the house members 
-                 or deducted as disciplinary action at the discretion of the department. 
-                 100 points are given to every house at the beginning. This can be a maximum of 200. ''')
-    st.warning('Global Leaderboard', icon="📊")
-    with st.expander("How to read the global leaderboard?"):
-        st.write(''' You can interact with the table by scrolling.
-                 Clicking on the column heads lets you sort through the leaderboard on that column. ''')
-        st.write(''' The Ranking is based on relative individual attendance 
-                 and internals scores of all 250 students. See you at the top! ''')
-        st.write(f''' The columns are as follows:''')
-        st.write(f''' 1. Roll No. - Roll number of the student. ''')
-        st.write(f''' 2. Attnd (%) - Average attendance of the student, in percentage,
-                 across all the sessions. ''')
-        st.write(f''' 3. Att Rank - Ranking of the student out of 250, based on average attendance. ''')
-        st.write(f''' 4. Tot Score - Total score of the student across all internal assessments. ''')
-        st.write(f''' 5. Score Rank - Ranking of the student out of 250, based on total score. ''')
-    leaderboard = houses[1]
-    for column in global_leaderboard_columns:
-        leaderboard[column] = pd.to_numeric(leaderboard[column])
-    st.dataframe(leaderboard.loc[:, global_leaderboard_columns], hide_index=True)
-    with st.expander("The Scientists That Inspired The House Names"):
+    
+    tab1, tab2, tab3, tab4 = st.tabs([" ⌛ Hourglasses ", " 🏘️ House Leaderboard ", 
+                                      " 📊 Global Leaderboard ", " 📜 Disclaimers "])
+
+    with tab1:
+        st.warning('Hourglasses', icon="⌛")
+        house_leaderboard = houses[0]
+        sorted_by_rank = house_leaderboard.sort_values(by=['Rank'], ascending=True)
+        for i in range(5):
+            render_house_card(sorted_by_rank, i)
+    
+    with tab2:
+        st.warning('House Leaderboard', icon="📊")
+        st.dataframe(houses[0], hide_index=True)
+        with st.expander(" 📜 Scoring Criteria"):
+            st.write(f''' Each house will be assigned a score, maximum being 1000, calculated as follows: ''')
+            st.write(f''' Total = Attendance + Scores + Bonus ''')
+            st.write(f''' 1. The Attendance component is calculated as the average attendance 
+                    of all 50 students of the house, in all the sessions. This can be a maximum of 400. ''')
+            st.write(f''' 2. The Scores component is calculated as the average score 
+                    of all 50 students of the house, in all the assessments. This can be a maximum of 400. ''')
+            st.write(f''' 3. The Bonus component is awarded in recognition of achievements of the house members 
+                    or deducted as disciplinary action at the discretion of the department. 
+                    100 points are given to every house at the beginning. This can be a maximum of 200. ''')
+        st.image('images/Common.png')
+        
+    with tab3:
+        st.warning('Global Leaderboard', icon="📊")
+        with st.expander(" 📜 How to read the global leaderboard?"):
+            st.write(''' You can interact with the table by scrolling.
+                    Clicking on the column heads lets you sort through the leaderboard on that column. ''')
+            st.write(''' The Ranking is based on relative individual attendance 
+                    and internals scores of all 250 students. See you at the top! ''')
+            st.write(f''' The columns are as follows:''')
+            st.write(f''' 1. Roll No. - Roll number of the student. ''')
+            st.write(f''' 2. Attnd (%) - Average attendance of the student, in percentage,
+                    across all the sessions. ''')
+            st.write(f''' 3. Att Rank - Ranking of the student out of 250, based on average attendance. ''')
+            st.write(f''' 4. Tot Score - Total score of the student across all internal assessments. ''')
+            st.write(f''' 5. Score Rank - Ranking of the student out of 250, based on total score. ''')
+        leaderboard = houses[1]
+        for column in global_leaderboard_columns:
+            leaderboard[column] = pd.to_numeric(leaderboard[column])
+        st.dataframe(leaderboard.loc[:, global_leaderboard_columns], hide_index=True)
+    
+    with tab4:
+        disclaimers()
+
+    with st.expander(" 📜 The Scientists That Inspired The House Names"):
         for scientist, url in scientists.items():
             st.markdown(f"[{scientist}]({url})")
 
 
 # Render student profile
 def render_profile(roll_number):
+    # Profile tab
+    st.warning('##### 👨‍⚕️ Student Profile')
     names = st.session_state.names
-    houses = st.session_state.houses
     name = names['Name'][roll_number-1]
     reg_no = names['Reg No'][roll_number-1]
-    st.info(f'HI, {name} !', icon="👋")
-    st.info(f'Reg. No. - {reg_no}', icon="👨‍⚕️")
+    st.write(f' 👋 Hi, {name.title()} !')
+    st.write(f' ⚕️ University Reg. No. - {reg_no}')
+    st.write(f' 🩺 Roll No. - {roll_number}')
+    st.warning('##### 🪄 Wizard Pass')
     index_hash = ((roll_number - 1) % 50) // 10
     house = houses_list[index_hash]
+    data = format_image_file(f"images/{house}.png")
+    card(
+        title=f' {roll_number} ',
+        text=[f'{name.title()}', f"{reg_no}"],
+        image=data
+        )
+    
+
+# Render house leaderboard
+def render_house_leaderboard(roll_number):
+    houses = st.session_state.houses
+    index_hash = ((roll_number - 1) % 50) // 10
+    house = houses_list[index_hash]
+    st.image(f'images/{house}.png')
     leaderboard = houses[index_hash + 2]
     leaderboard['Tot Att'] = pd.to_numeric(leaderboard['Tot Att'])
     leaderboard['Tot Class'] = pd.to_numeric(leaderboard['Tot Class'])
     leaderboard['Attnd (%)'] = round(leaderboard['Tot Att'] * 100 / leaderboard['Tot Class'], 2).astype(float)
     for column in house_leaderboard_columns:
         leaderboard[column] = pd.to_numeric(leaderboard[column])
-    st.image(f'images/{house}.png')
+    
     st.warning('House Leaderboard', icon="📊")
-    with st.expander("How to read the house leaderboard?"):
+    with st.expander(" 📜 How to read the house leaderboard?"):
         st.write(''' You can interact with the table by scrolling.
                  Clicking on the column heads lets you sort through the leaderboard. ''')
         st.write(''' The Ranking is based on relative individual attendance 
@@ -288,6 +333,7 @@ def render_theory(roll_number):
     date_columns = list(theory.columns)
     if date_columns[0] == 'E':
         st.write(f"###### Theory : No theory classes conducted yet")
+        st.session_state.theory_attendance = 'No theory classes conducted yet'
         return
     att_str = ''
     abs_list = [f'(s.no. | yyyy-mm-dd | hh-hh)']
@@ -318,9 +364,10 @@ def render_theory(roll_number):
         else:
             eligibility = '🟢 :green[Eligible]'
         st.write(f"###### Theory : ( {attended} / {total} ) - ( {percentage} % ) - ( {eligibility} )")
-        with st.expander("Theory Overview"):
+        st.session_state.theory_attendance = percentage
+        with st.expander(" 🙋‍♂️ Theory Overview"):
             st.write(att_str)
-        with st.expander("Theory Absence Details"):
+        with st.expander(" 🆎 Theory Absence Details"):
             for absence in abs_list:
                 st.write(absence)            
     else:
@@ -337,6 +384,7 @@ def render_attendance(roll_number):
         date_columns = list(data.columns)
         if date_columns[0] == 'E':
             st.write(f"###### {batch} : No {batch} sessions conducted yet")
+            st.session_state[f'{batch}_attendance'] = f'No {batch} sessions conducted yet'
             continue
         att_str = ''
         if batch == 'AETCOM':
@@ -383,9 +431,10 @@ def render_attendance(roll_number):
             else:
                 eligibility = '🟢 :green[Eligible]'
             st.write(f"###### {batch} : ( {attended} / {total} ) - ( {percentage} % ) - ( {eligibility} )")
-            with st.expander(f'{batch} Overview'):
+            st.session_state[f'{batch}_attendance'] = percentage
+            with st.expander(f' 🙋‍♂️ {batch} Overview'):
                 st.write(att_str)
-            with st.expander(f"{batch} Absences"):
+            with st.expander(f" 🆎 {batch} Absences"):
                 for absence in abs_list:
                     st.write(absence)
         else:
@@ -397,6 +446,11 @@ def render_attendance(roll_number):
 
 # Render scores
 def render_scores(roll_number):
+    # Scores tab
+    st.warning('##### 💯 Scores')
+    # Scores update news
+    st.write(f'''###### 🥳 {st.session_state.score_news_update} ''')
+    
     scores = st.session_state.scores
     
     # Load formatted scores of student into dictionary
@@ -418,6 +472,14 @@ def render_scores(roll_number):
         theory_list = []
         practical_list = []
     
+    # Force columns on phone screens - must probably change every time the code changes
+    st.write('''<style>
+                .st-emotion-cache-keje6w {
+                    width: calc(50% - 1rem) !important;
+                    flex: 1 1 calc(50% - 1rem) !important;
+                    min-width: calc(50% - 1rem) !important;
+                }
+                </style>''', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     
     try:
@@ -467,36 +529,42 @@ def render_scores(roll_number):
     #st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
 
     # Display final scores
-    with st.expander("Final Scores for Eligibility"):
+    with st.expander(" 💯 Final Scores for Eligibility"):
         st.write("1. Theory Total : TBD")
         st.write("2. Practical Total : TBD")
         st.write("3. Aggregate Score : TBD")
     
     # Display theory scores
-    with st.expander("Your Theory Scores"):
+    with st.expander(" 💯 Your Theory Scores"):
         theory_scores_dict = {'Assessment': [], 'Score': []}
         for column in theory_scores:
             theory_scores_dict['Assessment'].append(column)
             zeroes = scores[column].tolist().count('0')
             if zeroes == 250:
                 theory_scores_dict['Score'].append('TBD')
+                student_scores[column] = 'TBD'
             else:
                 theory_scores_dict['Score'].append(student_scores[column])
         theory_scores_df = pd.DataFrame(theory_scores_dict)
         st.dataframe(theory_scores_df, hide_index=True)
     
     # Display practical scores
-    with st.expander("Your Practical Scores"):
+    with st.expander(" 💯 Your Practical Scores"):
         practical_scores_dict = {'Assessment': [], 'Score': []}
         for column in practical_scores:
             practical_scores_dict['Assessment'].append(column)
             zeroes = scores[column].tolist().count('0')
             if zeroes == 250:
                 practical_scores_dict['Score'].append('TBD')
+                student_scores[column] = 'TBD'
             else:
                 practical_scores_dict['Score'].append(student_scores[column])
         practical_scores_df = pd.DataFrame(practical_scores_dict)
         st.dataframe(practical_scores_df, hide_index=True)
+    
+    st.session_state.student_scores = student_scores
+
+    scores_eligibility_criteria()
 
 
 # Render signatures
@@ -504,41 +572,69 @@ def signatures():
     sign1, sign2 = st.columns([2,1])
 
     with sign1:
-        st.success(" Developed by Dr Suraj", icon="🌟")
+        st.success(" Conjured by Dr Suraj ", icon="🪄")
     with sign2:
-        st.info(" Version 2.6", icon="ℹ️")
+        st.info(" Version 3.1 ", icon="🪄")
 
-    st.write('''** House emblems created by Dr Hudson ''')
     
-
 # Render disclaimers
 def disclaimers():
-    st.write('''** Please note that these records are made available provisionally 
+    st.warning('##### 📜 Disclaimers')
+    st.write(''' 📜 House emblems created by Dr Hudson ''')
+    st.write(''' 📜 Please note that these records are made available provisionally 
              for your reference, by the Department of Physiology. 
              All the records are for the subject of Physiology and for the batch of 2023-24 only. ''')
 
-    st.write('''** The records are not guaranteed to be completely accurate.
+    st.write(''' 📜 The records are not guaranteed to be completely accurate.
              In case of any inconsistencies with our physical records, the physical records shall be considered final.
              If you notice any discrepancies, please notify the department office immediately.''')
 
-    st.write('''** Eligibility criteria for appearing in the final examination 
+    st.write(''' 📜 Eligibility criteria for appearing in the final examination 
              are based on the attendance and formative assessment scores. 
              You will be allowed to write the examination only after fulfilling the eligibility criteria.
              Not fulfilling the criteria will result in disqualification.''')
+    ai_disclaimers()
+
+    
+def ai_disclaimers():
+    st.write(''' 📜 Divination is an experimental AI feature, using a third party AI model 
+             to generate personalized feedback responses based on the student's performance. 
+             The generated responses may not be accurate.
+             They have the same limitations as any AI model. 
+             The app developer does not take any responsibility for any such errors. ''')
+
+    st.write(f''' 📜 If you find that the responses are being inaccurate most of the time, 
+             please write to me so that I can tweak the prompts. Include the response, if possible.
+             You can either text me on WhatsApp or write to me 
+             anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8 ''')
+
+    st.write(''' 📜 Your attendance and scores are shared with the AI for generating the feedback.
+             No sensitive personal information like your name or register number is shared. ''')
+
+
+def support_the_app():
+    phone_number = st.secrets['phone_number']
+    upi_id = st.secrets['upi_id']
+    st.write(f''' 💝 Donate / Buy Me A Coffee ! Thank You ! ''' )
+    st.write(f''' 💸 UPI ID: :green[{upi_id}] ''' )
+    st.write(f''' 📱 GPay: :green[{phone_number}] ''' )
 
 
 # Developer's Note
 def developers_note():
-    st.write('''** Developer's Note - Thank you for using my app! I hope you find it helpful. 
+    phone_number = st.secrets['phone_number']
+    st.write(f''' 💌 Developer's Note - Thank you for using my app! I hope you find it helpful. 
              I would really appreciate your valuable feedback. Anything you would like to tell me is welcome!
-             Please reach out to me if you have any messages, suggestions, comments, queries or error reports. 
-             You can write to me anonymously using this google form : https://forms.gle/yCE9FAEyyQ5iDEgR8 ''')
-
-    st.write('''** - Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately)''')
-
+             Please reach out to me if you have any messages, suggestions, comments, queries or error reports.
+             You can text me on WhatsApp or send me an anonymous owl message using the google form below. ''')
+    st.write(f''' 💬: :green[{phone_number}] ''' )
+    st.write(f''' 🦉: https://forms.gle/yCE9FAEyyQ5iDEgR8 ''' )
+    st.write(''' 🖊️ Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately)''')
+    
 
 # Error message when failed to fetch records
 def failed_to_fetch():
+    phone_number = st.secrets['phone_number']
     st.error(' Could not fetch all the records', icon="⚠️")
     st.info(''' The most likely cause for this error is that the google server limits have been reached.
             The limits are refreshed every minute. 
@@ -547,10 +643,136 @@ def failed_to_fetch():
             If too many users try to fetch records over the same 60 seconds interval, 
             some users may fail to fetch some or all sets of records at the same time.
             You can review your error log to see which records failed to fetch. ''', icon="ℹ️")
-    st.info(''' If this error persists, or you encounter it very frequently, kindly notify me. 
+    st.info(f''' If this error persists, or you encounter it very frequently, kindly notify me. 
             If possible, please include the error log above to help me debug.
-            I will try to fix it or expand the limits on simultaneous users. 
-            You can write to me anonymously using this google form : 
+            I will try to fix it or expand the limits on simultaneous users.
+            My phone number is :green[{phone_number}]. You can text me on WhatsApp. 
+            You can also write to me anonymously using this google form : 
             https://forms.gle/yCE9FAEyyQ5iDEgR8 ''', icon="ℹ️")
-    st.info(''' Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately) ''', icon="🌟")
+    st.info(''' Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately) ''', icon="👨🏻‍💻")
+
+
+def ai_query(limit):
+    word_limit = word_limits[limit]
+    theory_attendance = st.session_state.theory_attendance
+    practical_attendance = st.session_state.Practical_attendance
+    aetcom_attendance = st.session_state.AETCOM_attendance
+    student_scores = st.session_state.student_scores
+    scores_part_of_query = "The student's theory scores are - "
+    assessments_to_be_conducted = f"The theory assessments yet to be conducted are - "
+    for assessment in theory_scores:
+        if student_scores[assessment] != 'TBD':
+            scores_part_of_query += f'{assessment} : {student_scores[assessment]}, '
+        else:
+            assessments_to_be_conducted += f'{assessment}, '
+    scores_part_of_query += f". The student's practical scores are - "
+    assessments_to_be_conducted = f". The practical assessments yet to be conducted are - "
+    for assessment in practical_scores:
+        if student_scores[assessment] != 'TBD':
+            scores_part_of_query += f'{assessment} : {student_scores[assessment]}, '
+        else:
+            assessments_to_be_conducted += f'{assessment}, '
+    scores_part_of_query += f"."
+    assessments_to_be_conducted = f"."
+    query = f'''You are a professor of Physiology. You teach 250 medical school students. 
+            You manage the attendance and scores records of the students throughout 3 terms. 
+            The minimum eligibility criteria for appearing in the final examination is that 
+            the student must have attended 75% of theory and AETCOM classes separately, and 
+            80% of practical classes. The internal assessment scores are calculated after considering 
+            multiple internal assessments conducted throughout 3 terms, numbered 1 to 3 if applicable
+            (for example, MCQ 1, MCQ 2, MCQ 3). 
+            Finally, the student must have at least 40% in theory and 40% in practical, with 50% in aggregate.
+            So, a general rule of thumb is that a score of 50% or higher in each assessment is good.
+            I will now tell you the attendance and scores of the student. I want you to provide him with
+            feedback and insights or recommendations based on his performance. If possible, include comments
+            on the trend in his performance over the terms (an assessment will have the term number after 
+            its name if it is conducted multiple times). The attendances I provide will be a snapshot of 
+            the current state and more classes will be taken, so an ineligibility can be recovered from.
+            I will provide the scores of assessments already conducted. Some assessments have not been 
+            conducted yet. {assessments_to_be_conducted} These assessments will be conducted in 
+            the upcoming terms and the student may try to make up for his scores if required.
+            The student's attendance in percentage is - theory : {theory_attendance} , 
+            practical : {practical_attendance} , AETCOM : {aetcom_attendance} 
+            The student's scores are - {scores_part_of_query}.
+            I want you to provide encouragement, feedback or caution to the student as is appropriate. 
+            Please phrase your answer as though you are directly addressing the student. 
+            Please do not include a greeting at the beginning or sign anything at the end. 
+            Keep it a little informal. Keep the word limit of your response between {word_limit} words. '''
+    return query
+
+
+def ai_feedback(limit):
+    api_keys = ['API_key_1', 'API_key_2', 'API_key_3', 'API_key_4']
+    random_api_key = random.choice(api_keys)
+    my_api_key = st.secrets[random_api_key]
+    genai.configure(api_key=my_api_key)
+    model = genai.GenerativeModel('gemini-pro')
+    query = ai_query(limit)
+    response = model.generate_content(query)
+    return response
+
+
+def ai_render(limit):
+    with st.spinner(''' ##### 🔮 The all-seeing magic crystal ball is looking into you '''):
+        try:
+            ai_response = ai_feedback(limit)
+            ai_success = True
+        except:
+            ai_success = False
+        if ai_success:
+            st.write(ai_response.text)
+        else:
+            st.write(" 🔮 The all-seeing magic crystal ball is dreaming. It will be back with you in a minute.")
+            st.write(''' 📜 When the crystal ball is used too frequently, it overheats and goes to sleep.
+                     But worry not, it will only take a short nap of 60 seconds. Please try again after a minute.  ''')
+
+
+def render_divination():
+    st.warning('##### 🔮 Divination')
+    st.write('##### 🔮 The all-seeing magic crystal ball offers its divination services!')
+    st.write('''<style>
+                .st-emotion-cache-1r6slb0 {
+                    width: calc(33.33% - 1rem) !important;
+                    flex: 1 1 calc(33.33% - 1rem) !important;
+                    min-width: calc(33.33% - 1rem) !important;
+                }
+                </style>''', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        short = st.button("Less!")
+    with col2:
+        medium = st.button("Divine!")
+    with col3:
+        long = st.button("More!")
+    if short:
+        ai_render('short')
+    elif long:
+        ai_render('long')
+    elif medium:
+        ai_render('medium')
+    else:
+        st.write(''' 🪄 You can try generating your feedback multiple times by clicking on the buttons above, 
+                based on how long you want your response to be. ''')
+        with st.expander(" 📜 Disclaimers "):
+            ai_disclaimers()
+
+
+def format_image_file(image_file):
+    with open(image_file, "rb") as f:
+        data = f.read()
+        encoded = base64.b64encode(data)
+    data = "data:image/png;base64," + encoded.decode("utf-8")
+    return data
+
+
+def render_house_card(leaderboard, index):
+    house = leaderboard.loc[index,'House']
+    total = leaderboard.loc[index,'Total']
+    rank = leaderboard.loc[index,'Rank']
+    data = format_image_file(f"images/{house}.png")
+    card(
+        title=f" ⌛ {total} ⌛ ",
+        text=[medals[rank], f"Rank : {rank}"],
+        image=data
+        )
 
