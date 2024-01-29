@@ -580,7 +580,7 @@ def signatures():
 # Render disclaimers
 def disclaimers():
     st.warning('##### 📜 Disclaimers')
-    st.write(''' 📜 House emblems created by Dr Hudson ''')
+    st.write(''' 📜 House concept and emblems created by Dr Hudson ''')
     st.write(''' 📜 Please note that these records are made available provisionally 
              for your reference, by the Department of Physiology. 
              All the records are for the subject of Physiology and for the batch of 2023-24 only. ''')
@@ -614,7 +614,7 @@ def ai_disclaimers():
 def support_the_app():
     phone_number = st.secrets['phone_number']
     upi_id = st.secrets['upi_id']
-    st.write(f''' 💝 Donate / Buy Me A Coffee ! Thank You ! ''' )
+    st.write(f''' 💝 Donate / Buy Me A Coffee ! Thank you for your support ! ''' )
     st.write(f''' 💸 UPI ID: :green[{upi_id}] ''' )
     st.write(f''' 📱 GPay: :green[{phone_number}] ''' )
 
@@ -650,7 +650,7 @@ def failed_to_fetch():
             https://forms.gle/yCE9FAEyyQ5iDEgR8 ''', icon="ℹ️")
     st.info(''' Dr Suraj, your friendly neighborhood Web Developer (not Spider-Man, unfortunately) ''', icon="👨🏻‍💻")
 
-
+# AI Query
 def ai_query(limit):
     word_limit = word_limits[limit]
     theory_attendance = st.session_state.theory_attendance
