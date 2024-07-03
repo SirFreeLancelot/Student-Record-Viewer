@@ -529,10 +529,9 @@ def render_scores(roll_number):
     #st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
     
     # Display final scores
-    with st.expander(" 💯 Final Scores for Eligibility"):
-        st.write(f"1. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
-        st.write(f"2. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
-        st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
+    st.write(f"###### Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
+    st.write(f"###### Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+    st.write(f"###### Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
     
     # Display theory scores
     with st.expander(" 💯 Your Theory Scores"):
