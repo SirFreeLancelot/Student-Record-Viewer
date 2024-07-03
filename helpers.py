@@ -527,12 +527,12 @@ def render_scores(roll_number):
     #st.write(f"1. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
     #st.write(f"2. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
     #st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
-
+    
     # Display final scores
     with st.expander(" 💯 Final Scores for Eligibility"):
-        st.write("1. Theory Total : TBD")
-        st.write("2. Practical Total : TBD")
-        st.write("3. Aggregate Score : TBD")
+        st.write(f"1. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
+        st.write(f"2. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+        st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
     
     # Display theory scores
     with st.expander(" 💯 Your Theory Scores"):
@@ -806,3 +806,12 @@ def render_house_card(leaderboard, index):
         image=data
         )
 
+
+def render_eligibility():
+    if st.session_state.eligible:
+        st.balloons()
+        st.success('''🎉 Congratulations, young wizard! You have completed your trials successfully. 
+                   You are now ready for a bigger trial, the university examination!''')
+    else:
+        st.error('''Uh oh! Looks like you have fallen short of fulfilling some eligibility criteria.
+                   Check your scores and attendance to see how you can remedy it!''')

@@ -96,6 +96,7 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
                                             " 💯 Scores ", " 📜 Disclaimers "])
 
     with tab1:
+        eligibility_banner = st.empty()
         render_profile(roll_number)
     
     with tab2:
@@ -122,6 +123,8 @@ developers_note()
 
 
 if st.session_state.valid_roll_number and st.session_state.data_pulled:
+    with eligibility_banner.container():
+        render_eligibility()
     with magic_crystal_ball.container():
         render_divination()
 
