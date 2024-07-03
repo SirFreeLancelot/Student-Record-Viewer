@@ -91,12 +91,13 @@ if not st.session_state.valid_roll_number and st.session_state.data_pulled:
 if st.session_state.valid_roll_number and st.session_state.data_pulled:
     st.session_state.eligible = True
     
+    eligibility_banner = st.empty()
+
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([" 👨‍⚕️ Profile ", " 🏠 House ", 
                                             " 🔮 Divination ", " 🙋‍♂️ Attendance ", 
                                             " 💯 Scores ", " 📜 Disclaimers "])
 
     with tab1:
-        eligibility_banner = st.empty()
         render_profile(roll_number)
     
     with tab2:
