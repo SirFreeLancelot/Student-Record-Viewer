@@ -16,7 +16,7 @@ cutoff = {"Theory": 75 ,"Practical": 80, "AETCOM": 75}
 
 # Frames must match possible batch ranges
 dataframes = ["D2:GU52", "D55:GU105", "D108:GU158", "D161:GU211", "D214:GU264"]
-name_frame = "B1:D251"
+name_frame = "B1:L251"
 house_frames = ["A1:F6", "A11:M261", "A266:H316", "J266:Q316", "S266:Z316", "AB266:AI316", "AK266:AR316"]
 theory_frame = "D1:GU251"
 scores_frames = ["B2:AC253", "B255"]
@@ -36,6 +36,9 @@ houses_list = ['Blackburn', 'Adelbert', 'Langendorff', 'Landsteiner', 'Sherringt
 global_leaderboard_columns = ['Roll No.', 'Attnd (%)', 'Att Rank', 'Tot Score', 'Score Rank']
 house_leaderboard_columns = ['Roll No.', 'Attnd (%)', 'Att Rnk Glb', 'Att Rnk Hs', 
                              'Tot Scr', 'Scr Rnk Glb', 'Scr Rnk Hs']
+
+# End of year message
+end_of_year = "All your classes and assessments for the year are done! Your final records are here!"
 
 # Scientists and their wikipedia pages 
 scientists = {
@@ -279,6 +282,11 @@ def render_profile(roll_number):
     st.warning('##### 👨‍⚕️ Student Profile')
     names = st.session_state.names
     name = names['Name'][roll_number-1]
+    # Check access
+    if names['Access'][roll_number-1] == "YES":
+        st.session_state.access = True
+    else:
+        st.session_state.access = False
     reg_no = names['Reg No'][roll_number-1]
     st.write(f' 👋 Hi, {name.title()} !')
     st.write(f' ⚕️ University Reg. No. - {reg_no}')
@@ -523,15 +531,12 @@ def render_scores(roll_number):
     else:
         practical_eligibility = '🟢 :green[Eligible]'
 
-    # Show eligibility at the year end
-    #st.write(f"1. Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
-    #st.write(f"2. Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
-    #st.write(f"3. Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
-    
-    # Display final scores
-    st.write(f"###### Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
-    st.write(f"###### Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
-    st.write(f"###### Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
+    news = st.session_state.score_news_update
+    if news == end_of_year:
+        # Display final scores
+        st.write(f"###### Theory Total : {student_scores['Theory Total']} ( {theory_eligibility} )")
+        st.write(f"###### Practical Total : {student_scores['Practical Total']} ( {practical_eligibility} )")
+        st.write(f"###### Aggregate Score : {student_scores['Aggregate']} ( {aggregate_eligibility} )")
     
     # Display theory scores
     with st.expander(" 💯 Your Theory Scores"):
@@ -573,7 +578,7 @@ def signatures():
     with sign1:
         st.success(" Conjured by Dr Suraj ", icon="🪄")
     with sign2:
-        st.info(" Version 3.1 ", icon="🪄")
+        st.info(" Version 24.1 ", icon="🪄")
 
     
 # Render disclaimers
@@ -592,7 +597,7 @@ def disclaimers():
              are based on the attendance and formative assessment scores. 
              You will be allowed to write the examination only after fulfilling the eligibility criteria.
              Not fulfilling the criteria will result in disqualification.''')
-    ai_disclaimers()
+    # ai_disclaimers()
 
     
 def ai_disclaimers():
@@ -814,3 +819,8 @@ def render_eligibility():
     else:
         st.error('''Uh oh! Looks like you have fallen short of fulfilling some eligibility criteria.
                    Check your scores and attendance to see how you can remedy it!''')
+        
+
+def restricted_access():
+    st.write('''👨‍⚕️ You are not authorized to access the data. Please contact the administrator. ''' )
+

@@ -22,6 +22,8 @@ if 'AETCOM_attendance' not in st.session_state:
     st.session_state.AETCOM_attendance = 0
 if 'student_scores' not in st.session_state:
     st.session_state.student_scores = 0
+if 'access' not in st.session_state:
+    st.session_state.access = False
 
 
 # Title of the app
@@ -93,9 +95,9 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
     
     eligibility_banner = st.empty()
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([" 👨‍⚕️ Profile ", " 🏠 House ", 
-                                            " 🔮 Divination ", " 🙋‍♂️ Attendance ", 
-                                            " 💯 Scores ", " 📜 Disclaimers "])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([" 👨‍⚕️ Profile ", " 🏠 House ", 
+                                            " 🙋‍♂️ Attendance ", " 💯 Scores ", 
+                                            " 📜 Disclaimers "])
 
     with tab1:
         render_profile(roll_number)
@@ -104,17 +106,20 @@ if st.session_state.valid_roll_number and st.session_state.data_pulled:
         render_house_leaderboard(roll_number)
 
     with tab3:
-        magic_crystal_ball = st.empty()
+        if st.session_state.access: 
+            attendance_eligibility_criteria()
+            render_theory(roll_number)
+            render_attendance(roll_number)
+        else:
+            restricted_access()
 
-    with tab4: 
-        attendance_eligibility_criteria()
-        render_theory(roll_number)
-        render_attendance(roll_number)
+    with tab4:
+        if st.session_state.access:
+            render_scores(roll_number)
+        else:
+            restricted_access()
 
     with tab5:
-        render_scores(roll_number)
-
-    with tab6:
         disclaimers()
 
 
@@ -123,9 +128,9 @@ support_the_app()
 developers_note()
 
 
-if st.session_state.valid_roll_number and st.session_state.data_pulled:
-    with eligibility_banner.container():
-        render_eligibility()
-    with magic_crystal_ball.container():
-        render_divination()
+if st.session_state.valid_roll_number and st.session_state.data_pulled and st.session_state.access:
+    news = st.session_state.score_news_update
+    if news == end_of_year:
+        with eligibility_banner.container():
+            render_eligibility()
 
