@@ -587,7 +587,7 @@ def disclaimers():
     st.write(''' 📜 House concept and emblems created by Dr Hudson ''')
     st.write(''' 📜 Please note that these records are made available provisionally 
              for your reference, by the Department of Physiology. 
-             All the records are for the subject of Physiology and for the batch of 2023-24 only. ''')
+             All the records are for the subject of Physiology and for the batch of 2024-25 only. ''')
 
     st.write(''' 📜 The records are not guaranteed to be completely accurate.
              In case of any inconsistencies with our physical records, the physical records shall be considered final.
