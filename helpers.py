@@ -822,5 +822,13 @@ def render_eligibility():
         
 
 def restricted_access():
-    st.write('''👨‍⚕️ You are not authorized to access the data. Please contact the administrator. ''' )
+    st.write(''' Kindly take 10 minutes to fill up a survey for my study.
+                 Read the following participant information sheet. 
+             
+                https://docs.google.com/document/d/1UUuoIeoKtaM_t42To3s9f8Sqd1t9mC-N0tH9XHL3fpc/edit?usp=sharing
+
+
+                 Use the link at the end to access and complete the google form survey.
+                 If you have any questions, please reach out to me. ''' )
+    st.write(''' - Dr. Suraj R S ''')
 
