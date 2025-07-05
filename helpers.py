@@ -20,6 +20,7 @@ name_frame = "B1:L251"
 house_frames = ["A1:F6", "A11:M261", "A266:H316", "J266:Q316", "S266:Z316", "AB266:AI316", "AK266:AR316"]
 theory_frame = "D1:GU251"
 scores_frames = ["B2:AC253", "B255"]
+house_point_frame = "A9:D250"
 scores_columns = ['Aggregate','Theory Total','Theory IA','Theory FA','Theory 1','Theory 2','Theory 3',
                   'Viva 1','Viva 2','MCQ 1','MCQ 2','MCQ 3','Seminar','Th Professionalism',
                   'Practical Total','Practical IA','Practical FA','Practical 1','Practical 2','Practical 3',
@@ -96,7 +97,7 @@ def load_student_data():
         random.shuffle(accounts)
     i = 1
     fetched = 0
-    with st.status(f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]", expanded=False) as status:
+    with st.status(f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]", expanded=False) as status:
         while i <= number_of_accounts and st.session_state.data_pulled == False:
             account = accounts[i-1]
             try:
@@ -115,7 +116,7 @@ def load_student_data():
                     st.session_state.houses = leaderboard_dataframes
                     st.write(f':green[Fetched House records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
                 if 'names' not in st.session_state:
                     name_sheet = client.open(sheet_name).worksheet('Eligibility')
                     st.write("Name worksheet found")
@@ -126,7 +127,7 @@ def load_student_data():
                     st.session_state.names = name_dataframe
                     st.write(f':green[Fetched Name records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
                 if 'theory' not in st.session_state:
                     theory_sheet = client.open(sheet_name).worksheet('Theory')
                     st.write("Theory worksheet found")
@@ -137,7 +138,7 @@ def load_student_data():
                     st.session_state.theory = theory_dataframe
                     st.write(f':green[Fetched Theory records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
                 for batch in batch_sessions:
                     if batch not in st.session_state:
                         dataframes_sheet = client.open(sheet_name).worksheet(batch)
@@ -151,7 +152,7 @@ def load_student_data():
                         st.session_state[batch] = batch_dataframes
                         st.write(f':green[Fetched {batch} records using {account}]')
                         fetched += 1
-                        status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                        status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
                 if 'scores' not in st.session_state or 'score_news_update' not in st.session_state:
                     scores_sheet = client.open(sheet_name).worksheet('Scores')
                     st.write('Scores worksheet found')
@@ -164,9 +165,20 @@ def load_student_data():
                     st.session_state.score_news_update = score_news_update
                     st.write(f':green[Fetched Scores records using {account}]')
                     fetched += 1
-                    status.update(label=f":blue[Fetched {fetched} / 6 records. Trying Reader {i} / {number_of_accounts}]")
+                    status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
+                if 'house_point_history' not in st.session_state:
+                    house_point_history_sheet = client.open(sheet_name).worksheet('House Point History')
+                    st.write('House Point History worksheet found')
+                    house_point_history_data = house_point_history_sheet.get(house_point_frame)
+                    st.write('House Point History data downloaded')
+                    house_point_history_dataframe = df_with_header(house_point_history_data)
+                    st.write('House Point History data formatted')
+                    st.session_state.house_point_history = house_point_history_dataframe
+                    st.write(f':green[Fetched House Point History records using {account}]')
+                    fetched += 1
+                    status.update(label=f":blue[Fetched {fetched} / 7 records. Trying Reader {i} / {number_of_accounts}]")
                 st.session_state.data_pulled = True
-                status.update(label=f":green[Fetched 6 / 6 records! Click to see status log]", state="complete", expanded=False)
+                status.update(label=f":green[Fetched 7 / 7 records! Click to see status log]", state="complete", expanded=False)
                 return True
             except:
                 i += 1
@@ -223,18 +235,29 @@ def scores_eligibility_criteria():
 def render_leaderboard():
     
     houses = st.session_state.houses
+    house_point_history = st.session_state.house_point_history
     
-    tab1, tab2, tab3, tab4 = st.tabs([" ⌛ Hourglasses ", " 🏘️ House Leaderboard ", 
-                                      " 📊 Global Leaderboard ", " 📜 Disclaimers "])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([" ⌛ Hourglasses ", " 🌟 Wall of Fame ", 
+                                            " 🏘️ House Leaderboard ", " 📊 Global Leaderboard ", 
+                                            " 📜 Disclaimers "])
 
     with tab1:
         st.warning('Hourglasses', icon="⌛")
         house_leaderboard = houses[0]
-        sorted_by_rank = house_leaderboard.sort_values(by=['Rank'], ascending=True)
+        house_leaderboard['Rank'] = house_leaderboard['Rank'].astype(int)
+        sorted_by_rank = house_leaderboard.sort_values(by='Rank')
+        sorted_by_rank.reset_index(drop=True, inplace=True)
         for i in range(5):
             render_house_card(sorted_by_rank, i)
-    
+
     with tab2:
+        st.warning('Wall of Fame', icon="🌟")
+        house_point_history['Bonus'] = pd.to_numeric(house_point_history['Bonus'])
+        house_point_history['Roll No'] = pd.to_numeric(house_point_history['Roll No'])
+        st.dataframe(house_point_history, hide_index=True)
+        
+    
+    with tab3:
         st.warning('House Leaderboard', icon="📊")
         st.dataframe(houses[0], hide_index=True)
         with st.expander(" 📜 Scoring Criteria"):
@@ -249,7 +272,7 @@ def render_leaderboard():
                     100 points are given to every house at the beginning. This can be a maximum of 200. ''')
         st.image('images/Common.png')
         
-    with tab3:
+    with tab4:
         st.warning('Global Leaderboard', icon="📊")
         with st.expander(" 📜 How to read the global leaderboard?"):
             st.write(''' You can interact with the table by scrolling.
@@ -268,7 +291,7 @@ def render_leaderboard():
             leaderboard[column] = pd.to_numeric(leaderboard[column])
         st.dataframe(leaderboard.loc[:, global_leaderboard_columns], hide_index=True)
     
-    with tab4:
+    with tab5:
         disclaimers()
 
     with st.expander(" 📜 The Scientists That Inspired The House Names"):
@@ -291,6 +314,12 @@ def render_profile(roll_number):
     st.write(f' 👋 Hi, {name.title()} !')
     st.write(f' ⚕️ University Reg. No. - {reg_no}')
     st.write(f' 🩺 Roll No. - {roll_number}')
+    with st.expander(" 🌟 House Points Earned "):
+        house_point_history = st.session_state.house_point_history
+        house_point_history['Roll No'] = pd.to_numeric(house_point_history['Roll No'])
+        house_point_history['Bonus'] = pd.to_numeric(house_point_history['Bonus'])
+        personal_house_point_history = house_point_history[house_point_history['Roll No'] == roll_number]
+        st.dataframe(personal_house_point_history[['Bonus', 'Reason']], hide_index=True)
     st.warning('##### 🪄 Wizard Pass')
     index_hash = ((roll_number - 1) % 50) // 10
     house = houses_list[index_hash]
@@ -578,7 +607,7 @@ def signatures():
     with sign1:
         st.success(" Conjured by Dr Suraj ", icon="🪄")
     with sign2:
-        st.info(" Version 24.1 ", icon="🪄")
+        st.info(" Version 24.2 ", icon="🪄")
 
     
 # Render disclaimers
@@ -806,7 +835,7 @@ def render_house_card(leaderboard, index):
     data = format_image_file(f"images/{house}.png")
     card(
         title=f" ⌛ {total} ⌛ ",
-        text=[medals[rank], f"Rank : {rank}"],
+        text=[medals[str(rank)], f"Rank : {rank}"],
         image=data
         )
 
